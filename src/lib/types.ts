@@ -51,6 +51,33 @@ export interface DocumentItem {
   created_at: string;
 }
 
+export type VisitSource = "manual" | "trip" | "google_timeline";
+
+export interface Place {
+  id: string;
+  owner_id: string;
+  city: string;
+  country: string;
+  country_code: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  normalized_key: string;
+  created_at: string;
+}
+
+export interface Visit {
+  id: string;
+  owner_id: string;
+  place_id: string;
+  trip_id: string | null;
+  start_date: string;
+  end_date: string;
+  source: VisitSource;
+  external_id: string | null;
+  created_at: string;
+  place: Place;
+}
+
 export interface DB {
   trips: Trip[];
   bookings: Booking[];

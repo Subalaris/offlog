@@ -35,6 +35,10 @@ export function AppShell({ children, nextTrip, userEmail }: { children: React.Re
             <span>✈</span>
             Trips
           </a>
+          <a href="/history" className={pathname.startsWith("/history") ? "active" : ""}>
+            <span>◎</span>
+            History
+          </a>
         </nav>
 
         {isTrip && (

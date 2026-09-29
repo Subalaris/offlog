@@ -278,6 +278,99 @@ input:focus, select:focus, textarea:focus {
 .auth-message { color: var(--green); font-size: 12px; margin-top: 16px; }
 .auth-error { color: var(--pink); }
 
+/* ── TRAVEL HISTORY ─────────────────────── */
+.history-topbar { margin-bottom: 22px; }
+.history-stats {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 150px)); gap: 12px;
+  margin-bottom: 18px;
+}
+.history-stats > div {
+  display: flex; flex-direction: column; padding: 17px 18px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+}
+.history-stats strong { font-size: 24px; line-height: 1.1; letter-spacing: -.7px; }
+.history-stats span { color: var(--muted); font-size: 11px; margin-top: 5px; text-transform: uppercase; letter-spacing: .7px; }
+.history-suggestions {
+  display: grid; grid-template-columns: minmax(190px, .65fr) 1.35fr; gap: 18px;
+  align-items: start; margin: 18px 0; padding: 18px;
+  background: linear-gradient(135deg, rgba(34, 211, 238, .07), rgba(13, 32, 42, .8));
+  border: 1px solid #205160; border-radius: 13px;
+}
+.history-suggestions > div > strong { font-size: 13px; }
+.history-suggestions p { color: var(--muted); font-size: 11px; margin-top: 5px; }
+.suggestion-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.suggestion-list button {
+  text-align: left; padding: 10px 12px; color: var(--text); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 9px;
+}
+.suggestion-list button:hover { border-color: var(--cyan-dark); }
+.suggestion-list span, .suggestion-list small { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.suggestion-list span { font-size: 12px; font-weight: 700; }
+.suggestion-list small { color: var(--muted); font-size: 10.5px; margin-top: 3px; }
+.history-toolbar { display: flex; justify-content: flex-end; margin: 24px 0 18px; }
+.history-tabs { display: inline-flex; gap: 3px; padding: 3px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.history-tabs button { border: 0; background: transparent; color: var(--muted); padding: 7px 13px; border-radius: 7px; font-size: 12px; }
+.history-tabs button:hover:not(:disabled) { color: var(--text); }
+.history-tabs button.active { color: #06222a; background: var(--cyan); font-weight: 700; }
+.history-tabs button:disabled { opacity: .35; cursor: default; }
+.travel-timeline { max-width: 900px; }
+.travel-year { display: grid; grid-template-columns: 82px minmax(0, 1fr); }
+.travel-year h2 { font-size: 20px; padding-top: 13px; color: var(--cyan-bright); letter-spacing: -.4px; }
+.travel-year-visits { position: relative; }
+.travel-year-visits::before {
+  content: ""; position: absolute; left: 8px; top: 0; bottom: 0; width: 1px; background: var(--border);
+}
+.travel-year:last-child .travel-year-visits::before { bottom: 28px; }
+.travel-visit { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 16px; position: relative; padding: 8px 0; }
+.travel-marker { position: relative; z-index: 1; padding-top: 19px; }
+.travel-marker span {
+  display: block; width: 9px; height: 9px; margin-left: 4px; border-radius: 50%;
+  background: var(--cyan); box-shadow: 0 0 0 5px var(--bg), 0 0 0 6px var(--cyan-dark);
+}
+.travel-visit-card {
+  min-height: 64px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px; transition: .15s;
+}
+.travel-visit-card:hover { border-color: var(--cyan-dark); }
+.travel-place { font-size: 14px; font-weight: 750; }
+.travel-dates { color: var(--muted); font-size: 11px; margin-top: 4px; }
+.history-row-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.history-source { color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .7px; margin-right: 5px; }
+.history-delete-icon:hover { color: var(--pink); border-color: rgba(251, 113, 133, .45); }
+.country-list { display: grid; gap: 13px; max-width: 950px; }
+.country-card { background: var(--surface); border: 1px solid var(--border); border-radius: 13px; overflow: hidden; }
+.country-head { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; padding: 17px 19px; border-bottom: 1px solid var(--border); }
+.country-head h2 { font-size: 17px; }
+.country-head span { color: var(--muted); font-size: 11px; }
+.city-list { display: flex; flex-direction: column; }
+.city-row { display: grid; grid-template-columns: minmax(120px, .4fr) 1.6fr; gap: 18px; align-items: center; padding: 13px 19px; }
+.city-row + .city-row { border-top: 1px solid var(--border); }
+.city-row strong { font-size: 13px; }
+.city-visits { display: flex; flex-wrap: wrap; gap: 6px; }
+.city-visits button {
+  padding: 5px 8px; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 7px; font-size: 10.5px;
+}
+.city-visits button:hover { color: var(--text); border-color: var(--cyan-dark); }
+.history-empty { display: flex; flex-direction: column; gap: 5px; }
+.history-empty strong { color: var(--text); font-size: 14px; }
+.history-muted { color: var(--muted); font-size: 11.5px; margin-top: 4px; }
+.history-form-error { margin-top: 13px; font-size: 12px; }
+.history-confirm-modal { max-width: 430px; }
+.history-import-modal { max-width: 980px; }
+.history-import-drop { padding: 22px; background: var(--surface-2); border: 1px dashed var(--border); border-radius: 11px; }
+.history-import-note { color: var(--muted); font-size: 11px; margin-top: 12px; }
+.history-import-summary { display: flex; flex-wrap: wrap; gap: 16px; color: var(--muted); font-size: 11px; margin-bottom: 12px; }
+.history-warning { color: var(--yellow); }
+.history-import-list { display: flex; flex-direction: column; max-height: 52vh; overflow: auto; border: 1px solid var(--border); border-radius: 11px; }
+.history-import-row { display: grid; grid-template-columns: 25px 1fr; align-items: center; gap: 8px; padding: 9px; opacity: .65; }
+.history-import-row + .history-import-row { border-top: 1px solid var(--border); }
+.history-import-row.selected { opacity: 1; background: rgba(34, 211, 238, .025); }
+.history-import-check { width: 15px; height: 15px; accent-color: var(--cyan); }
+.history-import-fields { display: grid; grid-template-columns: 1fr 1fr 135px 135px; gap: 7px; align-items: center; min-width: 0; }
+.history-import-fields input { padding: 7px 9px; font-size: 11px; }
+.history-import-fields small { color: var(--muted); grid-column: 1 / -1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* ── RESPONSIVE ──────────────────────────── */
 @media (max-width: 950px) {
   .app { grid-template-columns: 70px 1fr; }
@@ -292,6 +385,7 @@ input:focus, select:focus, textarea:focus {
   .form-grid { grid-template-columns: 1fr; }
   .span-2 { grid-column: span 1; }
   .docs-grid { grid-template-columns: 1fr; }
+  .history-suggestions { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 650px) {
@@ -305,6 +399,21 @@ input:focus, select:focus, textarea:focus {
   .airport-code { font-size: 25px; }
   .hero-button { position: static; margin-top: 20px; display: inline-block; }
   .hero-stats { gap: 15px; }
+  .history-stats { grid-template-columns: repeat(3, 1fr); }
+  .history-stats > div { padding: 13px 11px; }
+  .history-stats strong { font-size: 20px; }
+  .suggestion-list { grid-template-columns: 1fr; }
+  .history-toolbar { justify-content: stretch; }
+  .history-tabs { width: 100%; }
+  .history-tabs button { flex: 1; }
+  .travel-year { grid-template-columns: 54px minmax(0, 1fr); }
+  .travel-year h2 { font-size: 16px; }
+  .travel-visit { gap: 9px; }
+  .travel-visit-card { align-items: flex-start; }
+  .history-source { display: none; }
+  .city-row { grid-template-columns: 1fr; gap: 8px; }
+  .country-head { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .history-import-fields { grid-template-columns: 1fr 1fr; }
 }
 
 .hidden { display: none; }

@@ -1,6 +1,6 @@
 # OffLog
 
-A private travel planner for trips, flights, stays, activities, documents, and budgets.
+A private travel planner for trips, flights, stays, activities, documents, budgets, and travel history.
 
 ## Stack
 
@@ -13,7 +13,7 @@ A private travel planner for trips, flights, stays, activities, documents, and b
 ## Local setup
 
 1. Copy `.env.example` to `.env.local` and add your Supabase project URL and publishable key.
-2. Run `supabase/migrations/20260923000000_initial_schema.sql` in the Supabase SQL Editor.
+2. Run the SQL files in `supabase/migrations/` in filename order in the Supabase SQL Editor.
 3. In Supabase Auth, enable email sign-in and configure the email template to include `{{ .Token }}`.
 4. Allow `http://localhost:3000/**` in the Supabase redirect URL settings.
 5. Install and start the app:
@@ -38,3 +38,10 @@ Use the exact production URL as the Supabase Site URL and add it to the allowed 
 ## Database changes
 
 Keep schema changes in `supabase/migrations/`. Apply pending migrations to Supabase before deploying application code that depends on them.
+
+## Travel history imports
+
+The Travel History page accepts current Google Timeline JSON exports, older Takeout Timeline JSON,
+and simple JSON visit arrays. Parsing happens in the browser; the original location-history file is
+not uploaded or retained. Imported rows must have a reviewed city, country, arrival date, and
+departure date before they can be saved.
