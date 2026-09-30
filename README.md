@@ -31,7 +31,11 @@ Set these environment variables in the hosting provider:
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 NEXT_PUBLIC_SITE_URL
+BIGDATACLOUD_API_KEY
 ```
+
+`BIGDATACLOUD_API_KEY` is server-only. Create it in BigDataCloud under Account → Credentials and
+enable the Reverse Geocoding package. Never prefix it with `NEXT_PUBLIC_`.
 
 Use the exact production URL as the Supabase Site URL and add it to the allowed redirect URLs.
 
@@ -45,3 +49,7 @@ The Travel History page accepts current Google Timeline JSON exports, older Take
 and simple JSON visit arrays. Parsing happens in the browser; the original location-history file is
 not uploaded or retained. Imported rows must have a reviewed city, country, arrival date, and
 departure date before they can be saved.
+
+When `BIGDATACLOUD_API_KEY` is configured, the importer can group nearby coordinates and resolve
+them to city and country through BigDataCloud before review. Only representative coordinates are
+sent to the geocoding provider; the original Timeline file remains in the browser.

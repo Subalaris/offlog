@@ -361,6 +361,9 @@ input:focus, select:focus, textarea:focus {
 .history-import-drop { padding: 22px; background: var(--surface-2); border: 1px dashed var(--border); border-radius: 11px; }
 .history-import-note { color: var(--muted); font-size: 11px; margin-top: 12px; }
 .history-import-summary { display: flex; flex-wrap: wrap; gap: 16px; color: var(--muted); font-size: 11px; margin-bottom: 12px; }
+.history-import-summary button { margin-left: auto; border: 0; padding: 0; background: none; color: var(--cyan); font-size: 11px; }
+.history-import-summary button:hover:not(:disabled) { color: var(--cyan-bright); }
+.history-import-summary button:disabled { opacity: .55; cursor: default; }
 .history-warning { color: var(--yellow); }
 .history-import-list { display: flex; flex-direction: column; max-height: 52vh; overflow: auto; border: 1px solid var(--border); border-radius: 11px; }
 .history-import-row { display: grid; grid-template-columns: 25px 1fr; align-items: center; gap: 8px; padding: 9px; opacity: .65; }

@@ -254,6 +254,75 @@ export async function importGoogleTimelineAction(rows: ImportedVisitInput[]) {
   revalidatePath("/history");
 }
 
+export interface ReverseGeocodeInput {
+  id: string;
+  latitude: number;
+  longitude: number;
+}
+
+export interface ReverseGeocodeResult {
+  id: string;
+  city: string;
+  country: string;
+  countryCode: string;
+}
+
+export async function reverseGeocodeAction(points: ReverseGeocodeInput[]): Promise<ReverseGeocodeResult[]> {
+  await requireUser();
+  const apiKey = process.env.BIGDATACLOUD_API_KEY;
+  if (!apiKey) throw new Error("BigDataCloud is not configured yet");
+  if (!Array.isArray(points) || points.length === 0) return [];
+  if (points.length > 50) throw new Error("Resolve at most 50 location groups at a time");
+
+  const validPoints = points.map((point) => {
+    if (
+      !point.id ||
+      !Number.isFinite(point.latitude) || point.latitude < -90 || point.latitude > 90 ||
+      !Number.isFinite(point.longitude) || point.longitude < -180 || point.longitude > 180
+    ) throw new Error("Invalid coordinates in Timeline import");
+    return point;
+  });
+
+  const results: ReverseGeocodeResult[] = [];
+  for (let index = 0; index < validPoints.length; index += 5) {
+    const batch = validPoints.slice(index, index + 5);
+    const resolved = await Promise.all(batch.map(async (point) => {
+      const url = new URL("https://api-bdc.net/data/reverse-geocode");
+      url.searchParams.set("latitude", String(point.latitude));
+      url.searchParams.set("longitude", String(point.longitude));
+      url.searchParams.set("localityLanguage", "en");
+      const response = await fetch(url, {
+        headers: { "x-bdc-key": apiKey },
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error("BigDataCloud rejected the API key or Reverse Geocoding is not enabled");
+        }
+        if (response.status === 402) {
+          throw new Error("BigDataCloud's monthly request allowance has been reached");
+        }
+        throw new Error(`BigDataCloud lookup failed (${response.status})`);
+      }
+      const data = await response.json() as {
+        city?: string;
+        locality?: string;
+        principalSubdivision?: string;
+        countryName?: string;
+        countryCode?: string;
+      };
+      return {
+        id: point.id,
+        city: String(data.city || data.locality || data.principalSubdivision || "").trim(),
+        country: String(data.countryName || "").trim(),
+        countryCode: String(data.countryCode || "").trim().toUpperCase(),
+      };
+    }));
+    results.push(...resolved);
+  }
+  return results;
+}
+
 export async function signOutAction() {
   const supabase = await createClient();
   await supabase.auth.signOut();

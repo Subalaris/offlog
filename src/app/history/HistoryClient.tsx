@@ -6,6 +6,7 @@ import {
   createVisitAction,
   deleteVisitAction,
   importGoogleTimelineAction,
+  reverseGeocodeAction,
   updateVisitAction,
 } from "@/app/actions";
 import { parseGoogleTimeline, type ImportedVisitDraft } from "@/lib/googleTimeline";
@@ -122,6 +123,17 @@ function consolidateImportedVisits(rows: ImportedVisitDraft[]) {
   });
 }
 
+function buildGeocodeGroups(rows: ImportedVisitDraft[]) {
+  const groups: Array<{ id: string; anchor: ImportedVisitDraft; memberIds: string[] }> = [];
+  for (const row of rows) {
+    if ((row.city && row.country) || row.latitude == null || row.longitude == null) continue;
+    const existing = groups.find((group) => distanceKm(group.anchor, row) <= 15);
+    if (existing) existing.memberIds.push(row.id);
+    else groups.push({ id: `area-${groups.length}`, anchor: row, memberIds: [row.id] });
+  }
+  return groups;
+}
+
 function VisitModal({ seed, onClose }: { seed: EditorSeed; onClose: () => void }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
@@ -215,6 +227,7 @@ function DeleteVisitModal({ visit, onClose }: { visit: Visit; onClose: () => voi
 function ImportModal({ onClose }: { onClose: () => void }) {
   const [rows, setRows] = useState<ImportedVisitDraft[]>([]);
   const [message, setMessage] = useState("");
+  const [geocoding, setGeocoding] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const updateRow = (id: string, patch: Partial<ImportedVisitDraft>) => {
@@ -237,6 +250,41 @@ function ImportModal({ onClose }: { onClose: () => void }) {
   const validSelected = rows.filter((row) => row.selected && row.city.trim() && row.country.trim());
   const consolidatedVisits = consolidateImportedVisits(validSelected);
   const unresolved = rows.filter((row) => !row.city.trim() || !row.country.trim()).length;
+  const geocodeGroups = buildGeocodeGroups(rows);
+
+  const findCities = async () => {
+    setMessage("");
+    setGeocoding(true);
+    try {
+      const results: Awaited<ReturnType<typeof reverseGeocodeAction>> = [];
+      for (let index = 0; index < geocodeGroups.length; index += 50) {
+        const batch = geocodeGroups.slice(index, index + 50);
+        results.push(...await reverseGeocodeAction(batch.map((group) => ({
+          id: group.id,
+          latitude: group.anchor.latitude!,
+          longitude: group.anchor.longitude!,
+        }))));
+      }
+      const labels = new Map(results.map((result) => [result.id, result]));
+      const memberToGroup = new Map(geocodeGroups.flatMap((group) => group.memberIds.map((id) => [id, group.id] as const)));
+      setRows((current) => current.map((row) => {
+        const groupId = memberToGroup.get(row.id);
+        const label = groupId ? labels.get(groupId) : null;
+        if (!label) return row;
+        const city = row.city || label.city;
+        const country = row.country || label.country;
+        return { ...row, city, country, selected: Boolean(city && country) };
+      }));
+      const found = results.filter((result) => result.city && result.country).length;
+      setMessage(found === results.length
+        ? `Found cities for ${found} nearby location groups. Review them before importing.`
+        : `Found cities for ${found} of ${results.length} location groups. Review unresolved rows manually.`);
+    } catch (caught) {
+      setMessage(caught instanceof Error ? caught.message : "Could not resolve these coordinates");
+    } finally {
+      setGeocoding(false);
+    }
+  };
 
   return (
     <div className="modal-backdrop" onClick={(event) => event.target === event.currentTarget && onClose()}>
@@ -285,6 +333,11 @@ function ImportModal({ onClose }: { onClose: () => void }) {
               <span>{rows.length} visits found</span>
               <span>{consolidatedVisits.length} city visits ready to import</span>
               {unresolved > 0 && <span className="history-warning">{unresolved} need city or country</span>}
+              {geocodeGroups.length > 0 && (
+                <button type="button" onClick={findCities} disabled={geocoding || pending}>
+                  {geocoding ? "Finding cities…" : `Find cities automatically (${geocodeGroups.length} areas)`}
+                </button>
+              )}
             </div>
             <div className="history-import-list">
               {rows.map((row) => (
@@ -332,7 +385,7 @@ function ImportModal({ onClose }: { onClose: () => void }) {
           </>
         )}
 
-        {message && <p className="auth-error history-form-error">{message}</p>}
+        {message && <p className={message.startsWith("Found cities") ? "auth-message history-form-error" : "auth-error history-form-error"}>{message}</p>}
         <div className="modal-foot">
           {rows.length > 0 && (
             <button
