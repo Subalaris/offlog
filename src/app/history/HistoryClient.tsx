@@ -62,6 +62,66 @@ function groupBy<T>(items: T[], key: (item: T) => string) {
   return groups;
 }
 
+function addDays(date: string, days: number) {
+  const value = new Date(`${date}T00:00:00Z`);
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
+}
+
+function distanceKm(a: ImportedVisitDraft, b: ImportedVisitDraft) {
+  if (a.latitude == null || a.longitude == null || b.latitude == null || b.longitude == null) return Infinity;
+  const radians = (degrees: number) => degrees * Math.PI / 180;
+  const dLat = radians(b.latitude - a.latitude);
+  const dLng = radians(b.longitude - a.longitude);
+  const lat1 = radians(a.latitude);
+  const lat2 = radians(b.latitude);
+  const haversine = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+}
+
+function consolidateImportedVisits(rows: ImportedVisitDraft[]) {
+  const grouped = groupBy(rows, (row) => `${row.city.trim().toLowerCase()}|${row.country.trim().toLowerCase()}`);
+  return Array.from(grouped.values()).flatMap((group) => {
+    const sorted = [...group].sort((a, b) => a.startDate.localeCompare(b.startDate));
+    const stays: Array<{
+      city: string;
+      country: string;
+      startDate: string;
+      endDate: string;
+      latitude: number | null;
+      longitude: number | null;
+      ids: string[];
+    }> = [];
+    for (const row of sorted) {
+      const current = stays.at(-1);
+      if (current && row.startDate <= addDays(current.endDate, 1)) {
+        current.endDate = row.endDate > current.endDate ? row.endDate : current.endDate;
+        current.ids.push(row.id);
+      } else {
+        stays.push({
+          city: row.city.trim(),
+          country: row.country.trim(),
+          startDate: row.startDate,
+          endDate: row.endDate,
+          latitude: row.latitude,
+          longitude: row.longitude,
+          ids: [row.id],
+        });
+      }
+    }
+    return stays.map((stay) => ({
+      city: stay.city,
+      country: stay.country,
+      startDate: stay.startDate,
+      endDate: stay.endDate,
+      latitude: stay.latitude,
+      longitude: stay.longitude,
+      externalId: `group_${stay.ids[0]}_${stay.ids.at(-1)}_${stay.startDate}_${stay.endDate}`,
+    }));
+  });
+}
+
 function VisitModal({ seed, onClose }: { seed: EditorSeed; onClose: () => void }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
@@ -158,9 +218,24 @@ function ImportModal({ onClose }: { onClose: () => void }) {
   const [pending, startTransition] = useTransition();
 
   const updateRow = (id: string, patch: Partial<ImportedVisitDraft>) => {
-    setRows((current) => current.map((row) => row.id === id ? { ...row, ...patch } : row));
+    setRows((current) => {
+      const target = current.find((row) => row.id === id);
+      if (!target) return current;
+      const placePatch = "city" in patch || "country" in patch;
+      return current.map((row) => {
+        if (row.id !== id && (!placePatch || row.placeKey !== target.placeKey)) return row;
+        const updated = { ...row, ...patch };
+        return {
+          ...updated,
+          selected: placePatch
+            ? Boolean(updated.city.trim() && updated.country.trim())
+            : updated.selected,
+        };
+      });
+    });
   };
   const validSelected = rows.filter((row) => row.selected && row.city.trim() && row.country.trim());
+  const consolidatedVisits = consolidateImportedVisits(validSelected);
   const unresolved = rows.filter((row) => !row.city.trim() || !row.country.trim()).length;
 
   return (
@@ -208,7 +283,7 @@ function ImportModal({ onClose }: { onClose: () => void }) {
           <>
             <div className="history-import-summary">
               <span>{rows.length} visits found</span>
-              <span>{validSelected.length} ready to import</span>
+              <span>{consolidatedVisits.length} city visits ready to import</span>
               {unresolved > 0 && <span className="history-warning">{unresolved} need city or country</span>}
             </div>
             <div className="history-import-list">
@@ -226,17 +301,30 @@ function ImportModal({ onClose }: { onClose: () => void }) {
                       aria-label="City"
                       value={row.city}
                       placeholder="City required"
-                      onChange={(event) => updateRow(row.id, { city: event.target.value, selected: Boolean(event.target.value.trim() && row.country.trim()) })}
+                      onChange={(event) => updateRow(row.id, { city: event.target.value })}
                     />
                     <input
                       aria-label="Country"
                       value={row.country}
                       placeholder="Country required"
-                      onChange={(event) => updateRow(row.id, { country: event.target.value, selected: Boolean(row.city.trim() && event.target.value.trim()) })}
+                      onChange={(event) => updateRow(row.id, { country: event.target.value })}
                     />
                     <input aria-label="Arrival" type="date" value={row.startDate} onChange={(event) => updateRow(row.id, { startDate: event.target.value })} />
                     <input aria-label="Departure" type="date" value={row.endDate} onChange={(event) => updateRow(row.id, { endDate: event.target.value })} />
-                    <small title={row.sourceLabel}>{row.sourceLabel}</small>
+                    <div className="history-import-source">
+                      <small title={row.sourceLabel}>{row.sourceLabel}</small>
+                      {row.latitude != null && row.longitude != null && row.city.trim() && row.country.trim() && (
+                        <button
+                          type="button"
+                          onClick={() => setRows((current) => current.map((candidate) => {
+                            if (distanceKm(row, candidate) > 30) return candidate;
+                            return { ...candidate, city: row.city, country: row.country, selected: true };
+                          }))}
+                        >
+                          Apply to locations within 30 km
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -253,16 +341,8 @@ function ImportModal({ onClose }: { onClose: () => void }) {
               disabled={pending || validSelected.length === 0}
               onClick={() => startTransition(async () => {
                 try {
-                  for (let index = 0; index < validSelected.length; index += 500) {
-                    await importGoogleTimelineAction(validSelected.slice(index, index + 500).map((row) => ({
-                      city: row.city,
-                      country: row.country,
-                      startDate: row.startDate,
-                      endDate: row.endDate,
-                      latitude: row.latitude,
-                      longitude: row.longitude,
-                      externalId: row.id,
-                    })));
+                  for (let index = 0; index < consolidatedVisits.length; index += 500) {
+                    await importGoogleTimelineAction(consolidatedVisits.slice(index, index + 500));
                   }
                   onClose();
                 } catch (caught) {
@@ -270,7 +350,7 @@ function ImportModal({ onClose }: { onClose: () => void }) {
                 }
               })}
             >
-              {pending ? "Importing…" : `Import ${validSelected.length} visits`}
+              {pending ? "Importing…" : `Import ${consolidatedVisits.length} visits`}
             </button>
           )}
           <button type="button" className="btn btn-ghost" onClick={onClose} disabled={pending}>Cancel</button>

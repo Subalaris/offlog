@@ -1,5 +1,6 @@
 export interface ImportedVisitDraft {
   id: string;
+  placeKey: string;
   city: string;
   country: string;
   startDate: string;
@@ -40,6 +41,10 @@ function hash(value: string) {
 }
 
 function coordinates(locationValue: unknown): [number | null, number | null] {
+  if (typeof locationValue === "string") {
+    const match = locationValue.match(/(?:geo:)?(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/i);
+    return match ? [Number(match[1]), Number(match[2])] : [null, null];
+  }
   const location = record(locationValue);
   const latLng = text(location.latLng || location.latlng);
   const match = latLng.match(/(?:geo:)?(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/i);
@@ -53,6 +58,9 @@ function coordinates(locationValue: unknown): [number | null, number | null] {
 }
 
 function locationNames(locationValue: unknown): { city: string; country: string; label: string } {
+  if (typeof locationValue === "string") {
+    return { city: "", country: "", label: locationValue };
+  }
   const location = record(locationValue);
   const address = text(location.address || location.formattedAddress);
   const city = text(location.city || location.locality);
@@ -82,6 +90,7 @@ function makeDraft(
   const source = `${stableId}|${startDate}|${endDate}|${latitude}|${longitude}`;
   return {
     id: `google_${hash(source)}`,
+    placeKey: stableId || `${latitude},${longitude}`,
     city: names.city,
     country: names.country,
     startDate,
@@ -93,28 +102,46 @@ function makeDraft(
   };
 }
 
-function parseSemanticSegments(root: UnknownRecord) {
-  const segments = Array.isArray(root.semanticSegments) ? root.semanticSegments : [];
+function parseSemanticSegments(value: unknown) {
+  const root = record(value);
+  const segments = Array.isArray(value)
+    ? value
+    : Array.isArray(root.semanticSegments)
+      ? root.semanticSegments
+      : root.visit && root.startTime
+        ? [root]
+        : [];
   return segments.flatMap((value, index) => {
     const segment = record(value);
     const visit = record(segment.visit);
     if (!Object.keys(visit).length) return [];
     const candidate = record(visit.topCandidate);
-    const location = record(candidate.placeLocation);
-    const enrichedLocation = {
-      ...location,
-      name: candidate.name,
-      address: candidate.address,
-      city: candidate.city,
-      country: candidate.country,
-    };
+    const rawLocation = candidate.placeLocation;
+    const location = record(rawLocation);
+    const hasNamedLocation = candidate.name || candidate.address || candidate.city || candidate.country;
+    const enrichedLocation = hasNamedLocation
+      ? {
+          ...location,
+          latLng: typeof rawLocation === "string" ? rawLocation : location.latLng,
+          name: candidate.name,
+          address: candidate.address,
+          city: candidate.city,
+          country: candidate.country,
+        }
+      : rawLocation;
+    const placeId = text(candidate.placeId || candidate.placeID);
     const draft = makeDraft(
       segment.startTime,
       segment.endTime,
       enrichedLocation,
-      text(candidate.placeId) || `semantic-${index}`,
+      placeId || `semantic-${index}`,
     );
-    return draft ? [draft] : [];
+    return draft ? [{
+      ...draft,
+      sourceLabel: draft.sourceLabel === "Unresolved place"
+        ? placeId ? `Google place ${placeId}` : "Unresolved Google place"
+        : draft.sourceLabel,
+    }] : [];
   });
 }
 
@@ -153,7 +180,7 @@ function parseSimpleRows(value: unknown) {
 export function parseGoogleTimeline(value: unknown): ImportedVisitDraft[] {
   const root = record(value);
   const drafts = [
-    ...parseSemanticSegments(root),
+    ...parseSemanticSegments(value),
     ...parseLegacyTimeline(root),
     ...parseSimpleRows(value),
     ...parseSimpleRows(root.visits),
