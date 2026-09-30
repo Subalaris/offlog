@@ -358,8 +358,10 @@ input:focus, select:focus, textarea:focus {
 .history-form-error { margin-top: 13px; font-size: 12px; }
 .history-confirm-modal { max-width: 430px; }
 .history-import-modal { max-width: 980px; }
+.history-import-tabs { margin-bottom: 14px; }
 .history-import-drop { padding: 22px; background: var(--surface-2); border: 1px dashed var(--border); border-radius: 11px; }
 .history-import-note { color: var(--muted); font-size: 11px; margin-top: 12px; }
+.history-import-progress { color: var(--cyan); font-size: 11px; margin-top: 12px; }
 .history-import-summary { display: flex; flex-wrap: wrap; gap: 16px; color: var(--muted); font-size: 11px; margin-bottom: 12px; }
 .history-import-summary button { margin-left: auto; border: 0; padding: 0; background: none; color: var(--cyan); font-size: 11px; }
 .history-import-summary button:hover:not(:disabled) { color: var(--cyan-bright); }

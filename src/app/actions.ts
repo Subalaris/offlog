@@ -254,6 +254,19 @@ export async function importGoogleTimelineAction(rows: ImportedVisitInput[]) {
   revalidatePath("/history");
 }
 
+export async function importGooglePhotosAction(rows: ImportedVisitInput[]) {
+  const user = await requireUser();
+  if (!Array.isArray(rows) || rows.length === 0) return;
+  if (rows.length > 500) throw new Error("Import at most 500 reviewed visits at a time");
+  for (const row of rows) {
+    await insertVisit(user.id, validateVisitInput({
+      ...row,
+      source: "google_photos",
+    }));
+  }
+  revalidatePath("/history");
+}
+
 export interface ReverseGeocodeInput {
   id: string;
   latitude: number;

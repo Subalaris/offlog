@@ -1,17 +1,20 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, type InputHTMLAttributes } from "react";
 import type { Trip, Visit } from "@/lib/types";
 import {
   createVisitAction,
   deleteVisitAction,
+  importGooglePhotosAction,
   importGoogleTimelineAction,
   reverseGeocodeAction,
   updateVisitAction,
 } from "@/app/actions";
 import { parseGoogleTimeline, type ImportedVisitDraft } from "@/lib/googleTimeline";
+import { parseGooglePhotosFolder, type PhotoImportStats } from "@/lib/googlePhotos";
 
 type View = "timeline" | "places";
+type ImportMode = "timeline" | "photos";
 
 interface EditorSeed {
   visit?: Visit;
@@ -225,10 +228,23 @@ function DeleteVisitModal({ visit, onClose }: { visit: Visit; onClose: () => voi
 }
 
 function ImportModal({ onClose }: { onClose: () => void }) {
+  const [mode, setMode] = useState<ImportMode>("timeline");
   const [rows, setRows] = useState<ImportedVisitDraft[]>([]);
   const [message, setMessage] = useState("");
+  const [progress, setProgress] = useState("");
+  const [photoStats, setPhotoStats] = useState<PhotoImportStats | null>(null);
+  const [parsing, setParsing] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const [pending, startTransition] = useTransition();
+  const busy = pending || geocoding || parsing;
+
+  const changeMode = (next: ImportMode) => {
+    setMode(next);
+    setRows([]);
+    setMessage("");
+    setProgress("");
+    setPhotoStats(null);
+  };
 
   const updateRow = (id: string, patch: Partial<ImportedVisitDraft>) => {
     setRows((current) => {
@@ -291,46 +307,95 @@ function ImportModal({ onClose }: { onClose: () => void }) {
       <div className="modal history-import-modal">
         <div className="modal-head">
           <div>
-            <div className="modal-title">Import Google Timeline</div>
-            <p className="history-muted">The original JSON stays in this browser. Only visits you approve are saved.</p>
+            <div className="modal-title">Import travel history</div>
+            <p className="history-muted">Your original files stay in this browser. Only visits you approve are saved.</p>
           </div>
-          <button type="button" className="modal-x" onClick={onClose} disabled={pending}>×</button>
+          <button type="button" className="modal-x" onClick={onClose} disabled={busy}>×</button>
+        </div>
+
+        <div className="history-tabs history-import-tabs" role="tablist" aria-label="Import source">
+          <button type="button" className={mode === "timeline" ? "active" : ""} onClick={() => changeMode("timeline")} disabled={busy}>Google Timeline</button>
+          <button type="button" className={mode === "photos" ? "active" : ""} onClick={() => changeMode("photos")} disabled={busy}>Google Photos</button>
         </div>
 
         {rows.length === 0 ? (
           <div className="history-import-drop">
-            <label className="field">
-              Timeline JSON file
-              <input
-                type="file"
-                accept="application/json,.json"
-                onChange={async (event) => {
-                  setMessage("");
-                  const file = event.target.files?.[0];
-                  if (!file) return;
-                  if (file.size > 100 * 1024 * 1024) {
-                    setMessage("This first importer supports files up to 100 MB.");
-                    return;
-                  }
-                  try {
-                    const parsed = parseGoogleTimeline(JSON.parse(await file.text()));
-                    setRows(parsed);
-                    if (!parsed.length) setMessage("No supported place visits were found in this JSON file.");
-                  } catch {
-                    setMessage("This file is not valid JSON.");
-                  }
-                }}
-              />
-            </label>
-            <p className="history-import-note">
-              Supports current Semantic Timeline exports, older Takeout Timeline JSON, and simple visit arrays.
-              Detailed routes and raw location points are ignored.
-            </p>
+            {mode === "timeline" ? (
+              <>
+                <label className="field">
+                  Timeline JSON file
+                  <input
+                    type="file"
+                    accept="application/json,.json"
+                    disabled={busy}
+                    onChange={async (event) => {
+                      setMessage("");
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+                      if (file.size > 100 * 1024 * 1024) {
+                        setMessage("This importer supports Timeline files up to 100 MB.");
+                        return;
+                      }
+                      try {
+                        const parsed = parseGoogleTimeline(JSON.parse(await file.text()));
+                        setRows(parsed);
+                        if (!parsed.length) setMessage("No supported place visits were found in this JSON file.");
+                      } catch {
+                        setMessage("This file is not valid JSON.");
+                      }
+                    }}
+                  />
+                </label>
+                <p className="history-import-note">
+                  Supports current Semantic Timeline exports, older Takeout Timeline JSON, and simple visit arrays.
+                  Detailed routes and raw location points are ignored.
+                </p>
+              </>
+            ) : (
+              <>
+                <label className="field">
+                  Extracted Google Photos Takeout folder
+                  <input
+                    type="file"
+                    multiple
+                    disabled={busy}
+                    {...({ webkitdirectory: "", directory: "" } as InputHTMLAttributes<HTMLInputElement>)}
+                    onChange={async (event) => {
+                      setMessage("");
+                      setProgress("");
+                      setPhotoStats(null);
+                      const files = Array.from(event.target.files ?? []);
+                      if (!files.length) return;
+                      setParsing(true);
+                      try {
+                        const result = await parseGooglePhotosFolder(files, setProgress);
+                        setRows(result.drafts);
+                        setPhotoStats(result.stats);
+                        setProgress("");
+                        if (!result.drafts.length) {
+                          setMessage("No geotagged photos were found. Make sure you selected the extracted Google Photos Takeout folder containing photo metadata JSON or original images with location data.");
+                        }
+                      } catch {
+                        setMessage("Could not read this Takeout folder.");
+                        setProgress("");
+                      } finally {
+                        setParsing(false);
+                      }
+                    }}
+                  />
+                </label>
+                <p className="history-import-note">
+                  Select the extracted Google Photos folder, not the Takeout ZIP. OffLog reads location and date data from Google&rsquo;s metadata JSON files and, when needed, the photos&rsquo; EXIF metadata. Photos are never uploaded.
+                </p>
+                {progress && <p className="history-import-progress">{progress}</p>}
+              </>
+            )}
           </div>
         ) : (
           <>
             <div className="history-import-summary">
-              <span>{rows.length} visits found</span>
+              <span>{rows.length} possible visits found</span>
+              {mode === "photos" && photoStats && <span>{photoStats.locatedPhotos.toLocaleString()} geotagged photos</span>}
               <span>{consolidatedVisits.length} city visits ready to import</span>
               {unresolved > 0 && <span className="history-warning">{unresolved} need city or country</span>}
               {geocodeGroups.length > 0 && (
@@ -395,7 +460,9 @@ function ImportModal({ onClose }: { onClose: () => void }) {
               onClick={() => startTransition(async () => {
                 try {
                   for (let index = 0; index < consolidatedVisits.length; index += 500) {
-                    await importGoogleTimelineAction(consolidatedVisits.slice(index, index + 500));
+                    const batch = consolidatedVisits.slice(index, index + 500);
+                    if (mode === "photos") await importGooglePhotosAction(batch);
+                    else await importGoogleTimelineAction(batch);
                   }
                   onClose();
                 } catch (caught) {
@@ -406,7 +473,7 @@ function ImportModal({ onClose }: { onClose: () => void }) {
               {pending ? "Importing…" : `Import ${consolidatedVisits.length} visits`}
             </button>
           )}
-          <button type="button" className="btn btn-ghost" onClick={onClose} disabled={pending}>Cancel</button>
+          <button type="button" className="btn btn-ghost" onClick={onClose} disabled={busy}>Cancel</button>
         </div>
       </div>
     </div>
@@ -434,7 +501,9 @@ function TimelineView({ visits, onEdit, onDelete }: {
                     <div className="travel-dates">{rangeLabel(visit.start_date, visit.end_date)} · {durationLabel(visit.start_date, visit.end_date)}</div>
                   </div>
                   <div className="history-row-actions">
-                    <span className="history-source">{visit.source === "google_timeline" ? "Google" : visit.source}</span>
+                    <span className="history-source">
+                      {visit.source === "google_timeline" ? "Timeline" : visit.source === "google_photos" ? "Photos" : visit.source}
+                    </span>
                     <button className="icon-btn" title="Edit visit" onClick={() => onEdit(visit)}>✎</button>
                     <button className="icon-btn history-delete-icon" title="Remove visit" onClick={() => onDelete(visit)}>×</button>
                   </div>
@@ -547,7 +616,7 @@ export function HistoryClient({ visits, tripSuggestions }: { visits: Visit[]; tr
       {visits.length === 0 ? (
         <div className="empty history-empty">
           <strong>Your travel history starts here.</strong>
-          <span>Add a visit, confirm a past trip, or import a Google Timeline export.</span>
+          <span>Add a visit, confirm a past trip, or import from Google Timeline or Photos.</span>
         </div>
       ) : view === "timeline" ? (
         <TimelineView visits={visits} onEdit={(visit) => setEditor({ visit })} onDelete={setDeleting} />

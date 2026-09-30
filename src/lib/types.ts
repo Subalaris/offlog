@@ -51,7 +51,7 @@ export interface DocumentItem {
   created_at: string;
 }
 
-export type VisitSource = "manual" | "trip" | "google_timeline";
+export type VisitSource = "manual" | "trip" | "google_timeline" | "google_photos";
 
 export interface Place {
   id: string;
