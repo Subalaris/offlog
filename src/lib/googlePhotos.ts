@@ -13,6 +13,7 @@ export interface PhotoImportStats {
   imageFiles: number;
   locatedPhotos: number;
   candidateVisits: number;
+  skippedFiles: number;
 }
 
 export interface PhotoImportResult {
@@ -79,14 +80,23 @@ function daysBetween(a: string, b: string) {
 
 async function mapLimit<T>(items: T[], limit: number, task: (item: T, index: number) => Promise<void>) {
   let next = 0;
+  let failed = false;
   const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (next < items.length) {
+    while (!failed && next < items.length) {
       const index = next;
       next += 1;
-      await task(items[index], index);
+      try {
+        await task(items[index], index);
+      } catch (caught) {
+        failed = true;
+        throw caught;
+      }
     }
   });
-  await Promise.all(workers);
+  // Let in-flight reads finish before their archive readers are closed.
+  const results = await Promise.allSettled(workers);
+  const failure = results.find((result) => result.status === "rejected");
+  if (failure?.status === "rejected") throw failure.reason;
 }
 
 async function pointFromSidecar(file: File): Promise<PhotoPoint | null> {
@@ -180,18 +190,77 @@ function pointsToDrafts(points: PhotoPoint[]) {
 
 const IMAGE_EXTENSIONS = /\.(?:jpe?g|heic|heif|avif|png|tiff?|webp)$/i;
 
+interface PhotoFileSource {
+  name: string;
+  size: number;
+  read: () => Promise<File>;
+}
+
+// Read individual ZIP entries on demand, rather than expanding an entire photo library into memory.
+export async function parseGooglePhotosFiles(
+  files: File[],
+  onProgress?: (message: string) => void,
+): Promise<PhotoImportResult> {
+  const sources: PhotoFileSource[] = [];
+  const closeArchives: Array<() => Promise<void>> = [];
+  try {
+    for (const file of files) {
+      if (!/\.zip$/i.test(file.name)) {
+        sources.push({ name: file.name, size: file.size, read: async () => file });
+        continue;
+      }
+      onProgress?.(`Opening ${file.name}…`);
+      const { BlobReader, BlobWriter, ZipReader } = await import("@zip.js/zip.js");
+      const archive = new ZipReader(new BlobReader(file), { useWebWorkers: false });
+      closeArchives.push(() => archive.close());
+      try {
+        for await (const entry of archive.getEntriesGenerator()) {
+          if (entry.directory) continue;
+          const name = entry.filename.split("/").at(-1) || entry.filename;
+          if (!/\.json$/i.test(name) && !IMAGE_EXTENSIONS.test(name)) continue;
+          sources.push({
+            name,
+            size: entry.uncompressedSize,
+            read: async () => {
+              try {
+                return new File([await entry.getData(new BlobWriter(), { checkSignature: true })], name);
+              } catch {
+                throw new Error(`Could not read ${name} in ${file.name}. Choose a valid, unencrypted Takeout ZIP.`);
+              }
+            },
+          });
+        }
+      } catch {
+        throw new Error(`Could not open ${file.name}. Choose a valid, unencrypted Takeout ZIP or original photos.`);
+      }
+    }
+    return await parsePhotoSources(sources, onProgress);
+  } finally {
+    await Promise.allSettled(closeArchives.map((close) => close()));
+  }
+}
+
 export async function parseGooglePhotosFolder(
   files: File[],
   onProgress?: (message: string) => void,
 ): Promise<PhotoImportResult> {
-  const jsonFiles = files.filter((file) => file.name.toLowerCase().endsWith(".json"));
-  const imageFiles = files.filter((file) => IMAGE_EXTENSIONS.test(file.name));
+  return parseGooglePhotosFiles(files, onProgress);
+}
+
+async function parsePhotoSources(
+  sources: PhotoFileSource[],
+  onProgress?: (message: string) => void,
+): Promise<PhotoImportResult> {
+  const jsonFiles = sources.filter((file) => /\.json$/i.test(file.name));
+  const imageFiles = sources.filter((file) => IMAGE_EXTENSIONS.test(file.name));
   const points: PhotoPoint[] = [];
   const locatedFileNames = new Set<string>();
+  let skippedFiles = 0;
 
   onProgress?.(`Reading ${jsonFiles.length.toLocaleString()} metadata files…`);
-  await mapLimit(jsonFiles, 24, async (file, index) => {
-    const point = await pointFromSidecar(file);
+  await mapLimit(jsonFiles, 4, async (source, index) => {
+    if (source.size > 5 * 1024 * 1024) { skippedFiles += 1; return; }
+    const point = await pointFromSidecar(await source.read());
     if (point) {
       points.push(point);
       locatedFileNames.add(point.label.toLowerCase());
@@ -201,8 +270,9 @@ export async function parseGooglePhotosFolder(
 
   const exifFiles = imageFiles.filter((file) => !locatedFileNames.has(file.name.toLowerCase()));
   onProgress?.(`Checking EXIF in ${exifFiles.length.toLocaleString()} remaining images…`);
-  await mapLimit(exifFiles, 8, async (file, index) => {
-    const point = await pointFromExif(file);
+  await mapLimit(exifFiles, 2, async (source, index) => {
+    if (source.size > 100 * 1024 * 1024) { skippedFiles += 1; return; }
+    const point = await pointFromExif(await source.read());
     if (point) points.push(point);
     if (index > 0 && index % 200 === 0) onProgress?.(`Checked ${index.toLocaleString()} of ${exifFiles.length.toLocaleString()} images…`);
   });
@@ -220,6 +290,7 @@ export async function parseGooglePhotosFolder(
       imageFiles: imageFiles.length,
       locatedPhotos: unique.size,
       candidateVisits: drafts.length,
+      skippedFiles,
     },
   };
 }

@@ -46,15 +46,18 @@ Keep schema changes in `supabase/migrations/`. Apply pending migrations to Supab
 ## Travel history imports
 
 The Travel History page accepts current Google Timeline JSON exports, older Takeout Timeline JSON,
-simple JSON visit arrays, and extracted Google Photos Takeout folders. Photos imports use Google's
+simple JSON visit arrays, Google Photos Takeout ZIPs, extracted Takeout folders, and original photos.
+Select all ZIP parts of an export together, or drop ZIPs, photos, or metadata JSON onto the Photos
+import area. ZIP entries are read locally on demand without extracting the entire archive into memory.
+Photos imports use Google's
 sidecar metadata first and fall back to GPS and capture dates embedded in the original image files.
 Nearby photos taken within a few days are grouped into possible visits.
 
 Parsing happens in the browser; original location-history files and photos are not uploaded or
 retained. Imported rows must have a reviewed city, country, arrival date, and departure date before
-they can be saved. Extract Google Photos archives before selecting the Google Photos folder in the
-importer—the browser cannot inspect files inside a Takeout ZIP.
+they can be saved. Metadata files larger than 5 MB and photos larger than 100 MB are skipped.
 
 When `BIGDATACLOUD_API_KEY` is configured, the importer can group nearby coordinates and resolve
-them to city and country through BigDataCloud before review. Only representative coordinates are
+them to city and country automatically through BigDataCloud before review. If lookup is unavailable,
+visits remain available for manual editing and lookup can be retried. Only representative coordinates are
 sent to the geocoding provider; the original Timeline or Photos files remain in the browser.

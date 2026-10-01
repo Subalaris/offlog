@@ -11,7 +11,7 @@ import {
   updateVisitAction,
 } from "@/app/actions";
 import { parseGoogleTimeline, type ImportedVisitDraft } from "@/lib/googleTimeline";
-import { parseGooglePhotosFolder, type PhotoImportStats } from "@/lib/googlePhotos";
+import { parseGooglePhotosFiles, type PhotoImportStats } from "@/lib/googlePhotos";
 
 type View = "timeline" | "places";
 type ImportMode = "timeline" | "photos";
@@ -234,6 +234,7 @@ function ImportModal({ onClose }: { onClose: () => void }) {
   const [progress, setProgress] = useState("");
   const [photoStats, setPhotoStats] = useState<PhotoImportStats | null>(null);
   const [parsing, setParsing] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const [pending, startTransition] = useTransition();
   const busy = pending || geocoding || parsing;
@@ -268,13 +269,16 @@ function ImportModal({ onClose }: { onClose: () => void }) {
   const unresolved = rows.filter((row) => !row.city.trim() || !row.country.trim()).length;
   const geocodeGroups = buildGeocodeGroups(rows);
 
-  const findCities = async () => {
+  const findCities = async (drafts = rows) => {
+    const groups = buildGeocodeGroups(drafts);
+    if (!groups.length) return;
     setMessage("");
     setGeocoding(true);
     try {
       const results: Awaited<ReturnType<typeof reverseGeocodeAction>> = [];
-      for (let index = 0; index < geocodeGroups.length; index += 50) {
-        const batch = geocodeGroups.slice(index, index + 50);
+      for (let index = 0; index < groups.length; index += 50) {
+        setProgress(`Finding cities… ${Math.min(index + 50, groups.length)} of ${groups.length} areas`);
+        const batch = groups.slice(index, index + 50);
         results.push(...await reverseGeocodeAction(batch.map((group) => ({
           id: group.id,
           latitude: group.anchor.latitude!,
@@ -282,7 +286,7 @@ function ImportModal({ onClose }: { onClose: () => void }) {
         }))));
       }
       const labels = new Map(results.map((result) => [result.id, result]));
-      const memberToGroup = new Map(geocodeGroups.flatMap((group) => group.memberIds.map((id) => [id, group.id] as const)));
+      const memberToGroup = new Map(groups.flatMap((group) => group.memberIds.map((id) => [id, group.id] as const)));
       setRows((current) => current.map((row) => {
         const groupId = memberToGroup.get(row.id);
         const label = groupId ? labels.get(groupId) : null;
@@ -296,18 +300,43 @@ function ImportModal({ onClose }: { onClose: () => void }) {
         ? `Found cities for ${found} nearby location groups. Review them before importing.`
         : `Found cities for ${found} of ${results.length} location groups. Review unresolved rows manually.`);
     } catch (caught) {
-      setMessage(caught instanceof Error ? caught.message : "Could not resolve these coordinates");
+      setMessage(`${caught instanceof Error ? caught.message : "Could not resolve these coordinates"}. You can enter cities manually or retry the lookup.`);
     } finally {
       setGeocoding(false);
+      setProgress("");
+    }
+  };
+
+  const readPhotos = async (files: File[]) => {
+    if (!files.length || busy) return;
+    setMessage("");
+    setProgress("");
+    setPhotoStats(null);
+    setParsing(true);
+    try {
+      const result = await parseGooglePhotosFiles(files, setProgress);
+      setRows(result.drafts);
+      setPhotoStats(result.stats);
+      setProgress("");
+      if (!result.drafts.length) {
+        setMessage("No geotagged photos were found. Choose a Google Photos Takeout ZIP, metadata JSON files, or original photos with GPS data.");
+      } else {
+        await findCities(result.drafts);
+      }
+    } catch (caught) {
+      setMessage(caught instanceof Error ? caught.message : "Could not read these files.");
+    } finally {
+      setProgress("");
+      setParsing(false);
     }
   };
 
   return (
-    <div className="modal-backdrop" onClick={(event) => event.target === event.currentTarget && onClose()}>
-      <div className="modal history-import-modal">
+    <div className="modal-backdrop" onClick={(event) => !busy && event.target === event.currentTarget && onClose()}>
+      <div className="modal history-import-modal" role="dialog" aria-modal="true" aria-labelledby="history-import-title" aria-busy={busy}>
         <div className="modal-head">
           <div>
-            <div className="modal-title">Import travel history</div>
+            <div className="modal-title" id="history-import-title">Import travel history</div>
             <p className="history-muted">Your original files stay in this browser. Only visits you approve are saved.</p>
           </div>
           <button type="button" className="modal-x" onClick={onClose} disabled={busy}>×</button>
@@ -319,7 +348,21 @@ function ImportModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {rows.length === 0 ? (
-          <div className="history-import-drop">
+          <div
+            className={`history-import-drop ${dragging ? "dragging" : ""}`}
+            onDragOver={(event) => {
+              event.preventDefault();
+              if (mode === "photos" && !busy) setDragging(true);
+            }}
+            onDragLeave={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false);
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              setDragging(false);
+              if (mode === "photos" && !busy) void readPhotos(Array.from(event.dataTransfer.files));
+            }}
+          >
             {mode === "timeline" ? (
               <>
                 <label className="field">
@@ -336,12 +379,16 @@ function ImportModal({ onClose }: { onClose: () => void }) {
                         setMessage("This importer supports Timeline files up to 100 MB.");
                         return;
                       }
+                      setParsing(true);
                       try {
                         const parsed = parseGoogleTimeline(JSON.parse(await file.text()));
                         setRows(parsed);
                         if (!parsed.length) setMessage("No supported place visits were found in this JSON file.");
+                        else await findCities(parsed);
                       } catch {
                         setMessage("This file is not valid JSON.");
+                      } finally {
+                        setParsing(false);
                       }
                     }}
                   />
@@ -353,53 +400,55 @@ function ImportModal({ onClose }: { onClose: () => void }) {
               </>
             ) : (
               <>
-                <label className="field">
-                  Extracted Google Photos Takeout folder
+                <strong>Drop Takeout ZIPs or original photos here</strong>
+                <p className="history-muted">No extraction needed. Select all ZIPs if your export has multiple parts.</p>
+                <label className="field history-import-file-field">
+                  Takeout ZIPs, photos, or metadata JSON
                   <input
                     type="file"
                     multiple
+                    accept=".zip,.json,.jpg,.jpeg,.heic,.heif,.avif,.png,.tif,.tiff,.webp"
                     disabled={busy}
-                    {...({ webkitdirectory: "", directory: "" } as InputHTMLAttributes<HTMLInputElement>)}
-                    onChange={async (event) => {
-                      setMessage("");
-                      setProgress("");
-                      setPhotoStats(null);
+                    onChange={(event) => {
                       const files = Array.from(event.target.files ?? []);
-                      if (!files.length) return;
-                      setParsing(true);
-                      try {
-                        const result = await parseGooglePhotosFolder(files, setProgress);
-                        setRows(result.drafts);
-                        setPhotoStats(result.stats);
-                        setProgress("");
-                        if (!result.drafts.length) {
-                          setMessage("No geotagged photos were found. Make sure you selected the extracted Google Photos Takeout folder containing photo metadata JSON or original images with location data.");
-                        }
-                      } catch {
-                        setMessage("Could not read this Takeout folder.");
-                        setProgress("");
-                      } finally {
-                        setParsing(false);
-                      }
+                      event.target.value = "";
+                      void readPhotos(files);
                     }}
                   />
                 </label>
+                <details className="history-import-folder">
+                  <summary>Already extracted your Takeout? Choose a folder</summary>
+                  <label className="field history-import-file-field">
+                    Google Photos folder
+                    <input
+                      type="file"
+                      multiple
+                      disabled={busy}
+                      {...({ webkitdirectory: "", directory: "" } as InputHTMLAttributes<HTMLInputElement>)}
+                      onChange={(event) => {
+                        const files = Array.from(event.target.files ?? []);
+                        event.target.value = "";
+                        void readPhotos(files);
+                      }}
+                    />
+                  </label>
+                </details>
                 <p className="history-import-note">
-                  Select the extracted Google Photos folder, not the Takeout ZIP. OffLog reads location and date data from Google&rsquo;s metadata JSON files and, when needed, the photos&rsquo; EXIF metadata. Photos are never uploaded.
+                  OffLog reads dates and GPS from metadata or original photos, groups them into visits, and looks up cities for your review. Only representative coordinates are sent for city lookup. Photos stay in your browser.
                 </p>
-                {progress && <p className="history-import-progress">{progress}</p>}
               </>
             )}
           </div>
         ) : (
           <>
+            <p className="history-import-note">Review the visits below. Adjust places or dates, and uncheck any visits you don’t want to save.</p>
             <div className="history-import-summary">
               <span>{rows.length} possible visits found</span>
               {mode === "photos" && photoStats && <span>{photoStats.locatedPhotos.toLocaleString()} geotagged photos</span>}
               <span>{consolidatedVisits.length} city visits ready to import</span>
               {unresolved > 0 && <span className="history-warning">{unresolved} need city or country</span>}
               {geocodeGroups.length > 0 && (
-                <button type="button" onClick={findCities} disabled={geocoding || pending}>
+                <button type="button" onClick={() => void findCities()} disabled={busy}>
                   {geocoding ? "Finding cities…" : `Find cities automatically (${geocodeGroups.length} areas)`}
                 </button>
               )}
@@ -411,29 +460,32 @@ function ImportModal({ onClose }: { onClose: () => void }) {
                     className="history-import-check"
                     type="checkbox"
                     checked={row.selected}
-                    disabled={!row.city.trim() || !row.country.trim()}
+                    disabled={busy || !row.city.trim() || !row.country.trim()}
                     onChange={(event) => updateRow(row.id, { selected: event.target.checked })}
                   />
                   <div className="history-import-fields">
                     <input
+                      disabled={busy}
                       aria-label="City"
                       value={row.city}
                       placeholder="City required"
                       onChange={(event) => updateRow(row.id, { city: event.target.value })}
                     />
                     <input
+                      disabled={busy}
                       aria-label="Country"
                       value={row.country}
                       placeholder="Country required"
                       onChange={(event) => updateRow(row.id, { country: event.target.value })}
                     />
-                    <input aria-label="Arrival" type="date" value={row.startDate} onChange={(event) => updateRow(row.id, { startDate: event.target.value })} />
-                    <input aria-label="Departure" type="date" value={row.endDate} onChange={(event) => updateRow(row.id, { endDate: event.target.value })} />
+                    <input disabled={busy} aria-label="Arrival" type="date" value={row.startDate} onChange={(event) => updateRow(row.id, { startDate: event.target.value })} />
+                    <input disabled={busy} aria-label="Departure" type="date" value={row.endDate} onChange={(event) => updateRow(row.id, { endDate: event.target.value })} />
                     <div className="history-import-source">
                       <small title={row.sourceLabel}>{row.sourceLabel}</small>
                       {row.latitude != null && row.longitude != null && row.city.trim() && row.country.trim() && (
                         <button
                           type="button"
+                          disabled={busy}
                           onClick={() => setRows((current) => current.map((candidate) => {
                             if (distanceKm(row, candidate) > 30) return candidate;
                             return { ...candidate, city: row.city, country: row.country, selected: true };
@@ -450,13 +502,22 @@ function ImportModal({ onClose }: { onClose: () => void }) {
           </>
         )}
 
-        {message && <p className={message.startsWith("Found cities") ? "auth-message history-form-error" : "auth-error history-form-error"}>{message}</p>}
+        {progress && <p className="history-import-progress" role="status">{progress}</p>}
+        {photoStats && photoStats.skippedFiles > 0 && (
+          <p className="history-import-note">Skipped {photoStats.skippedFiles} files exceeding the size limits (5 MB for metadata, 100 MB for photos).</p>
+        )}
+        {message && <p role="status" className={message.startsWith("Found cities") ? "auth-message history-form-error" : "auth-error history-form-error"}>{message}</p>}
         <div className="modal-foot">
+          {rows.length > 0 && (
+            <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => changeMode(mode)}>
+              Choose different files
+            </button>
+          )}
           {rows.length > 0 && (
             <button
               type="button"
               className="btn btn-primary"
-              disabled={pending || validSelected.length === 0}
+              disabled={busy || validSelected.length === 0}
               onClick={() => startTransition(async () => {
                 try {
                   for (let index = 0; index < consolidatedVisits.length; index += 500) {
