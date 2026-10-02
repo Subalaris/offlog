@@ -181,6 +181,9 @@ export default async function Home() {
                     <div className="flight-city">{cityName(flight.to_place)}</div>
                   </div>
                 </div>
+                {(flight.flight_legs?.length ?? 0) > 1 && (
+                  <div className="flight-connection-label">Via {flight.flight_legs!.slice(0, -1).map((leg) => leg.to_place).join(" → ")}</div>
+                )}
                 <div className="card-footer">
                   <span>
                     {fmtDate(flight.date)}

@@ -20,6 +20,17 @@ export interface Trip {
   created_at: string;
 }
 
+export interface FlightLeg {
+  from_place: string;
+  to_place: string;
+  departure_date: string;
+  departure_time: string;
+  arrival_date: string;
+  arrival_time: string;
+  flight_number: string;
+  seat: string;
+}
+
 export interface Booking {
   id: string;
   trip_id: string;
@@ -37,6 +48,7 @@ export interface Booking {
   currency: string;
   status: "booked" | "pending" | "done";
   notes: string;
+  flight_legs?: FlightLeg[];
 }
 
 export interface DocumentItem {

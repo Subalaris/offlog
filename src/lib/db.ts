@@ -12,6 +12,13 @@ function fail(error: { message: string } | null) {
   if (error) throw new Error(error.message);
 }
 
+function failBookingWrite(error: { message: string; code?: string } | null) {
+  if (error?.message.includes("flight_legs") && (error.code === "PGRST204" || error.code === "42703")) {
+    throw new Error("Flight connections need a database update before bookings can be saved. Apply the flight connections migration in Supabase, then try again.");
+  }
+  fail(error);
+}
+
 export async function getTrips(): Promise<Trip[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.from("trips").select("*").order("start_date");
@@ -71,14 +78,18 @@ export async function getBookings(tripId: string): Promise<Booking[]> {
 
 export async function insertBooking(booking: Booking) {
   const supabase = await createClient();
-  const { error } = await supabase.from("bookings").insert(booking);
-  fail(error);
+  const { error } = await supabase.from("bookings").insert({ ...booking, date: booking.date || null, time: booking.time || null });
+  failBookingWrite(error);
 }
 
 export async function updateBooking(id: string, patch: Partial<Booking>) {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("bookings").update(patch).eq("id", id).select().maybeSingle();
-  fail(error);
+  const { data, error } = await supabase.from("bookings").update({
+    ...patch,
+    ...("date" in patch ? { date: patch.date || null } : {}),
+    ...("time" in patch ? { time: patch.time || null } : {}),
+  }).eq("id", id).select().maybeSingle();
+  failBookingWrite(error);
   return data as Booking | null;
 }
 

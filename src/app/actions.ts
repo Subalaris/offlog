@@ -14,6 +14,7 @@ import {
 } from "@/lib/db";
 import type { VisitInput } from "@/lib/db";
 import { validateDuplicateRemoval, type DuplicateVisitSelection } from "@/lib/visitDuplicates";
+import { flightBookingSummary, parseFlightLegs } from "@/lib/flights";
 
 function revalidateTrip(tripId: string) {
   revalidatePath(`/trips/${tripId}`);
@@ -70,6 +71,7 @@ export async function createBooking(tripId: string, formData: FormData) {
   await requireUser();
   if (!(await getTrip(tripId))) throw new Error("Trip not found");
   const type = (String(formData.get("type") || "flight") as BookingType);
+  const flightLegs = type === "flight" ? parseFlightLegs(formData.get("flight_legs")) : [];
   const booking: Booking = {
     id: uid("bk"),
     trip_id: tripId,
@@ -87,6 +89,8 @@ export async function createBooking(tripId: string, formData: FormData) {
     currency: "USD",
     status: (String(formData.get("status") || "booked") as Booking["status"]),
     notes: String(formData.get("notes") || "").trim(),
+    flight_legs: flightLegs,
+    ...(flightLegs.length ? flightBookingSummary(flightLegs) : {}),
   };
   await insertBooking(booking);
   revalidateTrip(tripId);
@@ -95,8 +99,10 @@ export async function createBooking(tripId: string, formData: FormData) {
 export async function updateBookingAction(bookingId: string, formData: FormData) {
   await requireUser();
   const tripId = String(formData.get("trip_id") || "");
+  const type = String(formData.get("type") || "flight") as BookingType;
+  const flightLegs = type === "flight" ? parseFlightLegs(formData.get("flight_legs")) : [];
   const patch: Partial<Booking> = {
-    type: String(formData.get("type") || "flight") as BookingType,
+    type,
     title: String(formData.get("title") || "").trim(),
     date: String(formData.get("date") || ""),
     time: String(formData.get("time") || ""),
@@ -109,6 +115,8 @@ export async function updateBookingAction(bookingId: string, formData: FormData)
     cost: formData.get("cost") ? Number(formData.get("cost")) : null,
     status: (String(formData.get("status") || "booked") as Booking["status"]),
     notes: String(formData.get("notes") || "").trim(),
+    ...(type !== "flight" || formData.has("flight_legs") ? { flight_legs: flightLegs } : {}),
+    ...(flightLegs.length ? flightBookingSummary(flightLegs) : {}),
   };
   await updateBooking(bookingId, patch);
   if (tripId) revalidateTrip(tripId);

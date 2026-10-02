@@ -6,6 +6,7 @@ import type { Trip, Booking } from "@/lib/types";
 import { TYPE_META } from "@/lib/types";
 import { fmtMD, fmtDate, fmtMoney, fmtRange, nightsBetween, todayStr } from "@/lib/format";
 import { BookingEditor } from "./BookingEditor";
+import { bookingFlightLegs } from "@/lib/flights";
 
 const STATUS_CHIP: Record<Booking["status"], string> = {
   booked: "chip-booked",
@@ -17,6 +18,29 @@ const STATUS_LABEL: Record<Booking["status"], string> = {
   pending: "Pending",
   done: "Done",
 };
+
+function FlightJourney({ booking }: { booking: Booking }) {
+  if (booking.type !== "flight") return null;
+  const legs = bookingFlightLegs(booking);
+  return (
+    <div className="flight-journey">
+      {legs.map((leg, index) => (
+        <div className="flight-journey-leg" key={index}>
+          <div className="flight-leg-route">{leg.from_place || "Departure"} → {leg.to_place || "Arrival"}</div>
+          {(leg.departure_date || leg.departure_time || leg.arrival_date || leg.arrival_time) && (
+            <div className="flight-leg-times">
+              <span>Departs {[leg.departure_date && fmtDate(leg.departure_date), leg.departure_time].filter(Boolean).join(" · ") || "—"}</span>
+              <span>Arrives {[leg.arrival_date && fmtDate(leg.arrival_date), leg.arrival_time].filter(Boolean).join(" · ") || "—"}</span>
+            </div>
+          )}
+          {(leg.flight_number || leg.seat) && <div className="flight-leg-details">{[leg.flight_number, leg.seat && `Seat ${leg.seat}`].filter(Boolean).join(" · ")}</div>}
+          {index < legs.length - 1 && <div className="flight-connection-label">Connection in {leg.to_place || "connecting airport"}</div>}
+        </div>
+      ))}
+      {legs.some((leg) => leg.departure_time || leg.arrival_time) && <div className="flight-local-times">All times are local to each airport</div>}
+    </div>
+  );
+}
 
 export function Timeline({ trip, bookings }: { trip: Trip; bookings: Booking[] }) {
   const today = todayStr();
@@ -68,10 +92,10 @@ export function Timeline({ trip, bookings }: { trip: Trip; bookings: Booking[] }
               {d.items.map((b) => {
                 const meta = TYPE_META[b.type];
                 const sub = [
-                  [b.from_place, b.to_place].filter(Boolean).join(" → "),
-                  b.seat ? `seat ${b.seat}` : "",
+                  b.type !== "flight" ? [b.from_place, b.to_place].filter(Boolean).join(" → ") : "",
+                  b.type !== "flight" && b.seat ? `seat ${b.seat}` : "",
                   b.reference ? `ref ${b.reference}` : "",
-                  b.time,
+                  b.type !== "flight" ? b.time : "",
                 ].filter(Boolean).join(" · ");
                 return (
                   <div className="tl-row" key={b.id}>
@@ -86,6 +110,7 @@ export function Timeline({ trip, bookings }: { trip: Trip; bookings: Booking[] }
                           ? ` · Check-out ${fmtDate(b.ends_at)} (${nightsBetween(b.date, b.ends_at)} nights)`
                           : ""}
                       </p>
+                      <FlightJourney booking={b} />
                     </div>
                     <div className="tl-side">
                       {b.cost != null && (
@@ -119,8 +144,9 @@ export function Timeline({ trip, bookings }: { trip: Trip; bookings: Booking[] }
                         {meta.glyph} {b.title || meta.label}
                       </strong>
                       <p>
-                        {[b.from_place, b.to_place].filter(Boolean).join(" → ") || b.provider}
+                        {b.type === "flight" ? [b.provider, b.reference && `ref ${b.reference}`].filter(Boolean).join(" · ") : [b.from_place, b.to_place].filter(Boolean).join(" → ") || b.provider}
                       </p>
+                      <FlightJourney booking={b} />
                     </div>
                     <div className="tl-side">
                       {b.cost != null && (

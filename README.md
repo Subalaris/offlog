@@ -23,6 +23,9 @@ npm install
 npm run dev
 ```
 
+Development output goes to `.next-dev`; production builds and `npm start` use `.next`.
+This keeps production build checks from overwriting the running development server's files.
+
 ## Production
 
 Set these environment variables in the hosting provider:
@@ -42,6 +45,19 @@ Use the exact production URL as the Supabase Site URL and add it to the allowed 
 ## Database changes
 
 Keep schema changes in `supabase/migrations/`. Apply pending migrations to Supabase before deploying application code that depends on them.
+
+## Flight connections
+
+Flight bookings support up to ten legs under one booking, confirmation code, and cost. Use
+**Add connection** in the booking form, enter the connecting airport, and add departure and
+arrival dates/times for each leg. Times are local to each airport; arrival dates can differ from
+departure dates. Flight numbers and seats can be entered per leg. Existing single-flight bookings
+remain editable, and the itinerary shows all legs together on the first departure day.
+
+Apply `supabase/migrations/20261001000000_flight_connections.sql` before deploying this feature.
+Local development also uses the Supabase project configured in `.env.local`; starting Next.js does
+not apply database migrations. Run the SQL file in that project's Supabase SQL Editor, then retry
+saving the booking. The migration can be rerun and requests an API schema-cache refresh.
 
 ## Travel history imports
 

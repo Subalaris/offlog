@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   title: { default: "OffLog", template: "%s · OffLog" },
   description: "A quiet place to keep your trips: flights, stays, plans, papers and money.",
   manifest: "/manifest.json",
+  icons: { icon: "/icon.svg", shortcut: "/icon.svg" },
 };
 
 export const viewport: Viewport = {
