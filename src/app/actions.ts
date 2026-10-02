@@ -10,9 +10,10 @@ import {
   insertBooking, updateBooking, deleteBooking,
   insertTrip, updateTrip as updateTripRecord, deleteTrip,
   insertDocument, deleteDocument, getTrip, uid,
-  insertVisit, updateVisitRecord, deleteVisitRecord,
+  insertVisit, updateVisitRecord, deleteVisitRecord, getVisits, deleteDuplicateVisitRecords,
 } from "@/lib/db";
 import type { VisitInput } from "@/lib/db";
+import { validateDuplicateRemoval, type DuplicateVisitSelection } from "@/lib/visitDuplicates";
 
 function revalidateTrip(tripId: string) {
   revalidatePath(`/trips/${tripId}`);
@@ -229,6 +230,19 @@ export async function deleteVisitAction(visitId: string) {
   await requireUser();
   await deleteVisitRecord(visitId);
   revalidatePath("/history");
+}
+
+export async function removeDuplicateVisitsAction(selections: DuplicateVisitSelection[]) {
+  const user = await requireUser();
+  if (!Array.isArray(selections) || selections.length > 500 || selections.some((selection) =>
+    !selection || typeof selection.keepId !== "string" || !Array.isArray(selection.removeIds)
+    || selection.removeIds.some((id) => typeof id !== "string")
+  )) throw new Error("Invalid duplicate selection");
+  const ids = validateDuplicateRemoval(await getVisits(), selections);
+  if (ids.length > 500) throw new Error("Remove at most 500 duplicates at a time. Select fewer groups.");
+  const removed = await deleteDuplicateVisitRecords(user.id, ids);
+  revalidatePath("/history");
+  return removed;
 }
 
 export interface ImportedVisitInput {

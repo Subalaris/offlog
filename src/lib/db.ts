@@ -236,6 +236,15 @@ export async function insertVisit(ownerId: string, input: VisitInput) {
   if (error?.code !== "23505") fail(error);
 }
 
+export async function deleteDuplicateVisitRecords(ownerId: string, ids: string[]) {
+  if (!ids.length) return 0;
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("visits")
+    .delete().eq("owner_id", ownerId).in("id", ids).select("id");
+  fail(error);
+  return data?.length ?? 0;
+}
+
 export async function updateVisitRecord(ownerId: string, id: string, input: VisitInput) {
   const supabase = await createClient();
   const { data: current, error: currentError } = await supabase

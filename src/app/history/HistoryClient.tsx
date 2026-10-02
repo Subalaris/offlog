@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition, type InputHTMLAttributes } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type InputHTMLAttributes } from "react";
 import type { Trip, Visit } from "@/lib/types";
 import {
   createVisitAction,
@@ -8,10 +8,12 @@ import {
   importGooglePhotosAction,
   importGoogleTimelineAction,
   reverseGeocodeAction,
+  removeDuplicateVisitsAction,
   updateVisitAction,
 } from "@/app/actions";
 import { parseGoogleTimeline, type ImportedVisitDraft } from "@/lib/googleTimeline";
 import { parseGooglePhotosFiles, type PhotoImportStats } from "@/lib/googlePhotos";
+import { findDuplicateVisitGroups, type DuplicateVisitSelection } from "@/lib/visitDuplicates";
 
 type View = "timeline" | "places";
 type ImportMode = "timeline" | "photos";
@@ -221,6 +223,125 @@ function DeleteVisitModal({ visit, onClose }: { visit: Visit; onClose: () => voi
             {pending ? "Removing…" : "Remove visit"}
           </button>
           <button type="button" className="btn btn-ghost" onClick={onClose} disabled={pending}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DuplicateVisitsModal({ visits, onClose, onRemoved }: {
+  visits: Visit[];
+  onClose: () => void;
+  onRemoved: (count: number) => void;
+}) {
+  const groups = useMemo(() => findDuplicateVisitGroups(visits), [visits]);
+  const [skipped, setSkipped] = useState<Set<string>>(new Set());
+  const [keepers, setKeepers] = useState<Record<string, string>>({});
+  const [error, setError] = useState("");
+  const [pending, startTransition] = useTransition();
+  const modalRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const previousFocus = document.activeElement as HTMLElement | null;
+    modalRef.current?.focus();
+    return () => previousFocus?.focus();
+  }, []);
+  const selections: DuplicateVisitSelection[] = groups.filter((group) => !skipped.has(group.key)).map((group) => {
+    const keepId = keepers[group.key] ?? group.visits[0].id;
+    return { keepId, removeIds: group.visits.filter((visit) => visit.id !== keepId).map((visit) => visit.id) };
+  });
+  const count = selections.reduce((total, selection) => total + selection.removeIds.length, 0);
+
+  return (
+    <div className="modal-backdrop" onClick={(event) => !pending && event.target === event.currentTarget && onClose()}>
+      <div ref={modalRef} tabIndex={-1} className="modal history-duplicates-modal" role="dialog" aria-modal="true" aria-labelledby="duplicates-title" aria-busy={pending}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            if (!pending) onClose();
+          }
+          if (event.key === "Tab") {
+            const controls = Array.from(event.currentTarget.querySelectorAll<HTMLElement>("button:not(:disabled), input:not(:disabled)"));
+            const first = controls[0];
+            const last = controls.at(-1);
+            if (!first) { event.preventDefault(); return; }
+            if (event.shiftKey && (document.activeElement === first || document.activeElement === event.currentTarget)) {
+              event.preventDefault(); last?.focus();
+            } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === event.currentTarget)) {
+              event.preventDefault(); first.focus();
+            }
+          }
+        }}>
+        <div className="modal-head">
+          <div className="modal-title" id="duplicates-title">Review duplicate visits</div>
+          <button type="button" className="modal-x" aria-label="Close duplicate review" onClick={onClose} disabled={pending}>×</button>
+        </div>
+        <p className="history-muted">
+          Matches have the same city, country, arrival, and departure dates, even across import sources.
+          Choose which copy to keep, or uncheck a group to leave it as is. Trip-linked and manual visits are suggested first.
+        </p>
+        {groups.length === 0 ? (
+          <p className="history-duplicate-empty" role="status">No duplicate visits found. Visits with different dates are kept separate.</p>
+        ) : (
+          <div className="history-duplicate-list">
+            {groups.map((group, index) => {
+              const first = group.visits[0];
+              const keepId = keepers[group.key] ?? first.id;
+              return (
+                <fieldset className="history-duplicate-group" key={group.key} disabled={pending}>
+                  <legend>{first.place.city}, {first.place.country} · {rangeLabel(first.start_date, first.end_date)}</legend>
+                  <label className="history-duplicate-toggle">
+                    <input type="checkbox" checked={!skipped.has(group.key)} onChange={(event) => {
+                      setSkipped((current) => {
+                        const next = new Set(current);
+                        if (event.target.checked) next.delete(group.key);
+                        else next.add(group.key);
+                        return next;
+                      });
+                    }} />
+                    Clean up this group ({group.visits.length} copies)
+                  </label>
+                  {group.visits.map((visit) => (
+                    <label className="history-duplicate-copy" key={visit.id}>
+                      <input type="radio" name={`duplicate-keeper-${index}`} checked={keepId === visit.id}
+                        disabled={skipped.has(group.key)} onChange={() => setKeepers((current) => ({ ...current, [group.key]: visit.id }))} />
+                      <span>
+                        {visit.source === "google_timeline" ? "Google Timeline" : visit.source === "google_photos" ? "Google Photos" : visit.source === "trip" ? "Trip" : "Manual"}
+                        {visit.trip_id && " · Linked to a trip"}
+                        <small>Added {new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(visit.created_at))}</small>
+                      </span>
+                      <span className="history-duplicate-disposition">{skipped.has(group.key) || keepId === visit.id ? "Keep" : "Remove"}</span>
+                    </label>
+                  ))}
+                </fieldset>
+              );
+            })}
+          </div>
+        )}
+        {count > 500 && <p className="history-import-note">Up to 500 copies are removed at a time. Scan again afterward to review the remaining duplicates.</p>}
+        {count > 0 && <p className="history-import-note">Removing copies is permanent. Your trips and their bookings are kept.</p>}
+        {error && <p className="auth-error history-form-error" role="alert">{error}</p>}
+        <div className="modal-foot">
+          {groups.length > 0 && (
+            <button type="button" className="btn btn-danger" disabled={pending || count === 0} onClick={() => {
+              setError("");
+              startTransition(async () => {
+                try {
+                  let remaining = 500;
+                  const batch = selections.map((selection) => {
+                    const removeIds = selection.removeIds.slice(0, remaining);
+                    remaining -= removeIds.length;
+                    return { ...selection, removeIds };
+                  }).filter((selection) => selection.removeIds.length > 0);
+                  onRemoved(await removeDuplicateVisitsAction(batch));
+                } catch (caught) {
+                  setError(caught instanceof Error ? caught.message : "Could not remove duplicates. Please scan again.");
+                }
+              });
+            }}>
+              {pending ? "Removing…" : `Remove ${Math.min(count, 500)} duplicate ${Math.min(count, 500) === 1 ? "visit" : "visits"}`}
+            </button>
+          )}
+          <button type="button" className="btn btn-ghost" disabled={pending} onClick={onClose}>{groups.length ? "Cancel" : "Done"}</button>
         </div>
       </div>
     </div>
@@ -618,6 +739,8 @@ export function HistoryClient({ visits, tripSuggestions }: { visits: Visit[]; tr
   const [editor, setEditor] = useState<EditorSeed | null>(null);
   const [deleting, setDeleting] = useState<Visit | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [duplicatesOpen, setDuplicatesOpen] = useState(false);
+  const [cleanupMessage, setCleanupMessage] = useState("");
   const countries = new Set(visits.map((visit) => visit.place.country.toLocaleLowerCase())).size;
   const cities = new Set(visits.map((visit) => `${visit.place.city.toLocaleLowerCase()}|${visit.place.country.toLocaleLowerCase()}`)).size;
 
@@ -629,10 +752,13 @@ export function HistoryClient({ visits, tripSuggestions }: { visits: Visit[]; tr
           <p>A record of the cities and countries you&rsquo;ve experienced.</p>
         </div>
         <div className="top-actions">
+          <button className="btn btn-ghost btn-sm" onClick={() => { setCleanupMessage(""); setDuplicatesOpen(true); }}>Scan duplicates</button>
           <button className="btn btn-ghost btn-sm" onClick={() => setImportOpen(true)}>Import</button>
           <button className="btn btn-primary btn-sm" onClick={() => setEditor({})}>+ Add visit</button>
         </div>
       </header>
+
+      {cleanupMessage && <p className="auth-message history-cleanup-message" role="status">{cleanupMessage}</p>}
 
       <section className="history-stats">
         <div><strong>{countries}</strong><span>Countries</span></div>
@@ -688,6 +814,10 @@ export function HistoryClient({ visits, tripSuggestions }: { visits: Visit[]; tr
       {editor && <VisitModal seed={editor} onClose={() => setEditor(null)} />}
       {deleting && <DeleteVisitModal visit={deleting} onClose={() => setDeleting(null)} />}
       {importOpen && <ImportModal onClose={() => setImportOpen(false)} />}
+      {duplicatesOpen && <DuplicateVisitsModal visits={visits} onClose={() => setDuplicatesOpen(false)} onRemoved={(count) => {
+        setDuplicatesOpen(false);
+        setCleanupMessage(`Removed ${count} duplicate ${count === 1 ? "visit" : "visits"}.`);
+      }} />}
     </>
   );
 }

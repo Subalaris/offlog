@@ -61,3 +61,10 @@ When `BIGDATACLOUD_API_KEY` is configured, the importer can group nearby coordin
 them to city and country automatically through BigDataCloud before review. If lookup is unavailable,
 visits remain available for manual editing and lookup can be retried. Only representative coordinates are
 sent to the geocoding provider; the original Timeline or Photos files remain in the browser.
+
+Use **Scan duplicates** on Travel History to review visits with matching city, country, arrival,
+and departure dates, including matches across import sources. The review suggests keeping
+trip-linked visits first, then manually entered visits, then the oldest imported copy. You can choose
+a different copy to keep or skip a group. Cleanup rechecks the matches before removing up to
+500 selected duplicate copies at a time. Trips and bookings are retained; visits with different
+date ranges are not treated as duplicates.
