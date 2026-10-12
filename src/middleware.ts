@@ -1,7 +1,18 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { safeAuthDestination } from "@/lib/authRedirect";
 
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  // The callback must be reachable before a session exists.
+  if (pathname === "/auth/callback") return NextResponse.next({ request });
+  // Older/default email templates may redirect to the site root rather than the callback.
+  if ((pathname === "/" || pathname === "/login") && request.nextUrl.searchParams.has("code")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/callback";
+    url.searchParams.set("next", safeAuthDestination(request.nextUrl.searchParams.get("next")));
+    return NextResponse.redirect(url);
+  }
   let response = NextResponse.next({ request });
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,7 +30,6 @@ export async function middleware(request: NextRequest) {
   );
 
   const { data: { user } } = await supabase.auth.getUser();
-  const pathname = request.nextUrl.pathname;
   const isLogin = pathname === "/login";
   const isApi = pathname.startsWith("/api/");
 
@@ -27,15 +37,18 @@ export async function middleware(request: NextRequest) {
     if (isApi) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("next", pathname);
-    return NextResponse.redirect(url);
+    url.search = "";
+    url.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
+    const redirect = NextResponse.redirect(url);
+    response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+    return redirect;
   }
 
   if (user && isLogin) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    url.search = "";
-    return NextResponse.redirect(url);
+    const url = new URL(safeAuthDestination(request.nextUrl.searchParams.get("next")), request.url);
+    const redirect = NextResponse.redirect(url);
+    response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+    return redirect;
   }
 
   return response;

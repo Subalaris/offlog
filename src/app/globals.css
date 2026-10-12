@@ -66,6 +66,42 @@ nav a span { width: 20px; text-align: center; font-size: 16px; }
 .account-row { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 10px 8px 0; border-top: 1px solid var(--border); }
 .account-signout { background: none; border: 0; color: var(--muted); font-size: 12px; padding: 4px 0; }
 .account-signout:hover { color: var(--text); }
+.account-profile { color: var(--text); text-decoration: none; }
+.account-profile:hover { border-color: var(--cyan); }
+.profile-sections { max-width: 760px; display: grid; gap: 20px; }
+.profile-heading { font-size: 17px; margin: 0 0 20px; }
+.profile-help { color: var(--muted); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.avatar { overflow: hidden; flex-shrink: 0; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.visited-map-section { display: grid; gap: 14px; }
+.visited-map-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.visited-map-heading p { margin: 0; color: var(--muted); font-size: 13px; }
+.visited-map-legend { display: flex; gap: 18px; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
+.visited-map-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.visited-map-dot { width: 14px; height: 14px; border: 2px solid #0e7490; border-radius: 50%; background: #22d3ee; }
+.visited-map-dot.future { border-color: #7c3aed; background: #a78bfa; }
+.visited-map-dot.mixed { border: 3px solid #7c3aed; }
+.visited-map { height: clamp(330px, 60vh, 620px); width: 100%; z-index: 0; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-3); }
+.visited-map-picking, .visited-map-picking .leaflet-interactive { cursor: crosshair; }
+.visited-map .leaflet-popup-content { color: #142b36; }
+.visited-map .leaflet-popup-content p { margin: 8px 0; }
+.visited-map .leaflet-popup-content a { color: #0e7490; }
+.visited-map .leaflet-control-attribution { font-size: 10px; }
+.visited-map-usage { color: var(--muted); font-size: 12px; line-height: 1.7; }
+.visited-map-usage summary { cursor: pointer; }
+.visited-map-usage a { color: var(--cyan); }
+.visited-map-warning { margin: 0; padding: 12px 14px; border: 1px solid #806221; border-radius: 10px; background: #302817; color: #fcd34d; font-size: 13px; line-height: 1.6; }
+.visited-map-missing, .visited-map-editor { padding: 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.visited-map-section h2 { font-size: 16px; margin: 0 0 10px; }
+.visited-map-place-list { display: flex; gap: 8px; flex-wrap: wrap; }
+.visited-map-place-list .active { border-color: var(--cyan); color: var(--cyan); }
+.visited-map-coordinates { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; margin: 16px 0; }
+.visited-map-coordinates .field { flex: 1; min-width: 120px; }
+.profile-photo-preview { width: 96px; height: 96px; font-size: 28px; }
+.profile-photo-row { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.profile-photo-row > div { flex: 1; min-width: 220px; }
+.profile-photo-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.mobile-profile-link { display: none; }
 .mini-trip {
   padding: 15px; border: 1px solid var(--border); background: var(--surface);
   border-radius: 12px; text-decoration: none; display: block; transition: .2s;
@@ -246,6 +282,8 @@ input:focus, select:focus, textarea:focus {
 .flight-leg-fields legend { padding: 0 6px; font-weight: 700; font-size: 12px; color: var(--cyan); }
 .flight-remove-connection { margin-top: 12px; }
 .booking-form-error { margin-top: 16px; font-size: 12px; }
+.auth-code-option { margin-top: 22px; font-size: 12px; color: var(--muted); }
+.auth-code-option summary { cursor: pointer; }
 .flight-journey { margin-top: 10px; font-size: 12px; }
 .flight-journey-leg + .flight-journey-leg { margin-top: 8px; }
 .flight-leg-route { color: var(--text); font-weight: 650; overflow-wrap: anywhere; }
@@ -427,6 +465,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 @media (max-width: 650px) {
+  .mobile-profile-link { display: block; position: fixed; bottom: 16px; right: 16px; padding: 10px 16px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); color: var(--text); text-decoration: none; z-index: 20; }
   .app { display: block; }
   .sidebar { display: none; }
   main { padding: 20px 15px; }

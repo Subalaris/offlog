@@ -5,6 +5,8 @@ import { AppShell } from "@/components/AppShell";
 import { getTrips } from "@/lib/db";
 import { todayStr } from "@/lib/format";
 import { getCurrentUser } from "@/lib/auth";
+import { readProfile } from "@/lib/profile";
+import { profilePhotoPath, profilePhotoUrl } from "@/lib/profilePhoto";
 
 export const metadata: Metadata = {
   title: { default: "OffLog", template: "%s · OffLog" },
@@ -33,7 +35,8 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AppShell nextTrip={next} userEmail={user?.email ?? null}>{children}</AppShell>
+        <AppShell nextTrip={next} userEmail={user?.email ?? null} userName={readProfile(user?.user_metadata).display_name}
+          avatarUrl={user ? profilePhotoUrl(profilePhotoPath(user.user_metadata, user.id)) : null}>{children}</AppShell>
       </body>
     </html>
   );

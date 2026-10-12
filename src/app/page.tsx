@@ -1,5 +1,6 @@
 
 import Link from "next/link";
+import { UserAvatar } from "@/components/Avatar";
 import { getTrips, getBookings } from "@/lib/db";
 import {
   fmtRange, fmtDate, nightsBetween, fmtMoney, greeting, todayStr,
@@ -61,7 +62,7 @@ export default async function Home() {
           <Link href="/trips" className="btn btn-ghost btn-sm">
             All trips →
           </Link>
-          <div className="avatar">ML</div>
+          <UserAvatar />
         </div>
       </header>
 

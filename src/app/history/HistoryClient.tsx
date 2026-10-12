@@ -14,8 +14,11 @@ import {
 import { parseGoogleTimeline, type ImportedVisitDraft } from "@/lib/googleTimeline";
 import { parseGooglePhotosFiles, type PhotoImportStats } from "@/lib/googlePhotos";
 import { findDuplicateVisitGroups, type DuplicateVisitSelection } from "@/lib/visitDuplicates";
+import dynamic from "next/dynamic";
 
-type View = "timeline" | "places";
+const VisitedMap = dynamic(() => import("./VisitedMap"), { ssr: false, loading: () => <p className="history-muted" role="status">Loading map…</p> });
+
+type View = "timeline" | "places" | "map";
 type ImportMode = "timeline" | "photos";
 
 interface EditorSeed {
@@ -796,7 +799,7 @@ export function HistoryClient({ visits, tripSuggestions }: { visits: Visit[]; tr
         <div className="history-tabs" role="tablist" aria-label="Travel history view">
           <button className={view === "timeline" ? "active" : ""} onClick={() => setView("timeline")}>Timeline</button>
           <button className={view === "places" ? "active" : ""} onClick={() => setView("places")}>Places</button>
-          <button disabled title="Map view is coming next">Map</button>
+          <button className={view === "map" ? "active" : ""} onClick={() => setView("map")}>Map</button>
         </div>
       </div>
 
@@ -805,6 +808,8 @@ export function HistoryClient({ visits, tripSuggestions }: { visits: Visit[]; tr
           <strong>Your travel history starts here.</strong>
           <span>Add a visit, confirm a past trip, or import from Google Timeline or Photos.</span>
         </div>
+      ) : view === "map" ? (
+        <VisitedMap visits={visits} />
       ) : view === "timeline" ? (
         <TimelineView visits={visits} onEdit={(visit) => setEditor({ visit })} onDelete={setDeleting} />
       ) : (

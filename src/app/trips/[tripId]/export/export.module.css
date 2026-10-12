@@ -1,0 +1,43 @@
+.preview { max-width: 900px; margin: 0 auto; }
+.controls { margin-bottom: 28px; }
+.back { color: var(--muted); text-decoration: none; font-size: 14px; }
+.controls h1 { margin: 20px 0 8px; font-size: 26px; }
+.controls p { color: var(--muted); line-height: 1.6; }
+.controls fieldset { display: flex; flex-wrap: wrap; gap: 16px 24px; border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin: 20px 0; }
+.controls legend { padding: 0 8px; font-size: 13px; }
+.controls label { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+.controls input { width: 16px; height: 16px; accent-color: var(--cyan); }
+.hint { font-size: 13px; margin-bottom: 18px; }
+.paper { background: #fff; color: #18232c; padding: 44px; border-radius: 4px; font: 14px/1.55 Arial, sans-serif; overflow-wrap: anywhere; color-scheme: light; }
+.paper p { margin: 5px 0; }
+.brand { font-size: 10px; letter-spacing: 2px; color: #465865; }
+.tripHeader { border-bottom: 2px solid #18232c; padding-bottom: 22px; margin-bottom: 26px; }
+.tripHeader h2 { font-size: 30px; line-height: 1.2; margin: 12px 0; }
+.destination { font-size: 18px; }
+.day { margin-top: 24px; }
+.day h3 { font-size: 16px; margin: 0 0 10px; padding-bottom: 6px; border-bottom: 1px solid #aab5bc; break-after: avoid; }
+.booking { margin-bottom: 14px; padding: 8px 0 16px; border-bottom: 1px solid #dce1e4; break-inside: avoid; }
+.bookingHeading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.bookingHeading h4 { font-size: 15px; margin: 0 0 5px; }
+.bookingHeading span { font-size: 11px; color: #465865; flex-shrink: 0; }
+.leg { margin: 10px 0; padding-left: 12px; border-left: 2px solid #aab5bc; break-inside: avoid; }
+.connection, .localTimes { color: #465865; font-size: 12px; }
+.notes { white-space: pre-wrap; }
+.footer { margin-top: 28px; font-size: 11px; color: #465865; border-top: 1px solid #aab5bc; padding-top: 10px; }
+@media (max-width: 650px) {
+  .paper { padding: 24px 18px; }
+  .tripHeader h2 { font-size: 25px; }
+  .bookingHeading { flex-wrap: wrap; gap: 4px; }
+}
+@media print {
+  @page { size: auto; margin: 15mm; }
+  :global(body):has(.preview) { background: white !important; color: #18232c; }
+  :global(main.export-main):has(.preview) { padding: 0; margin: 0; max-width: none; }
+  .preview { max-width: none; margin: 0; }
+  .controls { display: none; }
+  .paper { padding: 0; border-radius: 0; font-size: 10pt; }
+  .tripHeader h2 { font-size: 24pt; }
+  .bookingHeading { flex-wrap: nowrap; }
+  .day h3 { font-size: 12pt; }
+  .bookingHeading h4 { font-size: 11pt; }
+}

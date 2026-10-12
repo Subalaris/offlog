@@ -6,7 +6,7 @@ A private travel planner for trips, flights, stays, activities, documents, budge
 
 - Next.js 15 App Router and Server Actions
 - React 19, TypeScript, Tailwind CSS 4
-- Supabase Auth with email one-time codes
+- Supabase Auth with email sign-in links or one-time codes
 - Supabase Postgres with Row Level Security
 - Private Supabase Storage for travel documents
 
@@ -14,7 +14,8 @@ A private travel planner for trips, flights, stays, activities, documents, budge
 
 1. Copy `.env.example` to `.env.local` and add your Supabase project URL and publishable key.
 2. Run the SQL files in `supabase/migrations/` in filename order in the Supabase SQL Editor.
-3. In Supabase Auth, enable email sign-in and configure the email template to include `{{ .Token }}`.
+3. In Supabase Auth, enable email sign-in. The default sign-in-link template is supported;
+   optionally include `{{ .Token }}` in the email to allow code entry as well.
 4. Allow `http://localhost:3000/**` in the Supabase redirect URL settings.
 5. Install and start the app:
 
@@ -41,10 +42,51 @@ BIGDATACLOUD_API_KEY
 enable the Reverse Geocoding package. Never prefix it with `NEXT_PUBLIC_`.
 
 Use the exact production URL as the Supabase Site URL and add it to the allowed redirect URLs.
+Allow `https://YOUR_PRODUCTION_HOST/auth/callback**` and `http://localhost:3000/auth/callback**`
+under Supabase Authentication → URL Configuration → Redirect URLs. OffLog sends each sign-in
+email back to the origin where sign-in started, finishes authentication at `/auth/callback`, and
+returns the user to the requested page. Default templates that return a code to the site root
+are also routed through the callback automatically.
+
+For links that also work when opened in a different browser/device, configure the Magic Link
+and Confirm Signup email templates to verify a token hash at the callback:
+
+```html
+<a href="{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=email">Sign in to OffLog</a>
+```
+
+OffLog's `RedirectTo` includes the `next` query parameter. This optional template uses direct
+token verification; the default template uses PKCE and should be opened in the browser where
+sign-in started. Expired or already used links return a clear error with an option to request
+a new email.
+
+## User profiles
+
+Open **Profile** in the sidebar or select the account avatar to edit your display name,
+home city/country, and default currency. Currency applies to newly created trips only.
+These preferences are saved in Supabase Auth user metadata; no database migration is needed.
+Profile pictures support JPEG, PNG, and WebP (up to 10 MB before processing). The browser creates
+a 512-pixel square preview and uploads the resized picture after **Save photo**. Pictures use the
+existing private `trip-documents` bucket under `<user-id>/profile/`, with its existing owner-only
+policies. The authenticated photo endpoint serves only the current user's picture. Replacing or
+removing a picture also attempts to delete the old file. No additional migration is needed.
+Email changes are handled separately through Supabase Auth and require any confirmations
+configured for the project (normally both the current and new inboxes). Default email-change
+templates can return to `/auth/callback?next=/profile`; custom token-hash templates must use
+`type=email_change` for this flow.
 
 ## Database changes
 
 Keep schema changes in `supabase/migrations/`. Apply pending migrations to Supabase before deploying application code that depends on them.
+
+## Trip PDF exports
+
+Open a trip and choose **Export trip** to preview a clean itinerary with flights and connections,
+stays, transfers, and activities. Costs and budget, confirmation codes, and trip/booking notes
+are optional and off by default. Documents are excluded. Choose **Print / Save as PDF**, then
+select your browser's PDF destination. Turn off print headers and footers for a clean export.
+The saved PDF is a snapshot; export again after editing the trip. The preview requires sign-in
+and uses the trip's existing owner-only access. No database migration is needed.
 
 ## Flight connections
 
@@ -60,6 +102,30 @@ not apply database migrations. Run the SQL file in that project's Supabase SQL E
 saving the booking. The migration can be rerun and requests an API schema-cache refresh.
 
 ## Travel history imports
+
+Travel History’s **Map** tab shows one marker per place, with dates and links to associated trips.
+Visited places are cyan, future places are purple, and places with both past and future visits have
+a cyan center with a purple border. Visits arriving today count as visited. Coordinates already
+imported from Timeline or Photos are reused.
+For places without coordinates, choose a city match from the bundled `all-the-cities` / GeoNames
+dataset, review the pin, and save it. Ambiguous matches require choosing a candidate; unmatched
+places can be pinned manually or given latitude/longitude. Coordinates are saved on the existing
+place record, so no additional migration or geocoding API key is needed. The city database stays
+on the server and makes no external geocoding requests. It is a snapshot and does not cover every
+small settlement or alternative name. GeoNames data is credited in the map’s usage details under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+
+OpenStreetMap imagery loads only when the Map tab is open, only for the current viewport, with
+browser caching and no offline/prefetch features. The map limits zoom to city scale and pauses
+downloads after repeated imagery errors. A conservative local allowance warns at 240 and stops
+at 300 tile attempts per browser per UTC day, including cache hits. The counter is persisted in
+localStorage; if storage is blocked it is limited to the current map session. This is an Offlog
+precaution, **not an OSM quota**: counters are separate across browsers and concurrent tabs can
+race. It cannot guarantee compliance at high application-wide traffic. OSM publishes no fixed
+free request quota and can block heavy usage without notice; review the
+[tile usage policy](https://operations.osmfoundation.org/policies/tiles/) before scaling. There is
+no paid fallback or billing integration. For larger usage, replace the tile provider and add a
+shared application-wide allowance appropriate to its terms.
 
 The Travel History page accepts current Google Timeline JSON exports, older Takeout Timeline JSON,
 simple JSON visit arrays, Google Photos Takeout ZIPs, extracted Takeout folders, and original photos.

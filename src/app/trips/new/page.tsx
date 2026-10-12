@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { NewTripCard } from "@/components/NewTripCard";
+import { UserAvatar } from "@/components/Avatar";
 
 export const metadata: Metadata = {
   title: "New Trip",
@@ -18,7 +19,7 @@ export default function NewTripPage() {
           <Link href="/" className="btn btn-ghost btn-sm">
             ← Dashboard
           </Link>
-          <div className="avatar">ML</div>
+          <UserAvatar />
         </div>
       </header>
 

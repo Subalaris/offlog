@@ -72,7 +72,7 @@ await test("create and update keep all legs in one booking with one shared cost/
     if (name === "@/lib/auth") return { requireUser: async () => ({ id: "owner" }) };
     if (name === "next/cache") return { revalidatePath: path => paths.push(path) };
     if (name === "@/lib/db") return {
-      uid: () => "booking-one", getTrip: async () => ({ id: "trip" }),
+      uid: () => "booking-one", getTrip: async () => ({ id: "trip", currency: "EUR" }),
       insertBooking: async booking => inserts.push(booking),
       updateBooking: async (id, patch) => updates.push({ id, patch }),
     };
@@ -87,6 +87,7 @@ await test("create and update keep all legs in one booking with one shared cost/
   assert.equal(inserts[0].to_place, "Zagreb (ZAG)");
   assert.equal(inserts[0].date, direct.departure_date);
   assert.equal(inserts[0].cost, 1000);
+  assert.equal(inserts[0].currency, "EUR");
   assert.equal(inserts[0].reference, "ABC123");
   assert.deepEqual(inserts[0].flight_legs, legs);
   await actions.updateBookingAction("booking-one", fd);

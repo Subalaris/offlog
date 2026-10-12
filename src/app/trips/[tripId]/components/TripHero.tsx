@@ -25,6 +25,9 @@ export function TripHero({ trip }: { trip: Trip }) {
           </p>
         </div>
         <div className="top-actions">
+          <Link className="btn btn-ghost btn-sm" href={`/trips/${trip.id}/export`}>
+            Export trip
+          </Link>
           <button className="btn btn-ghost btn-sm" onClick={() => setOpen(!open)} disabled={pending}>
             {open ? "Hide edit" : "Edit trip"}
           </button>

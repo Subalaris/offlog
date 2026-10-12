@@ -1,5 +1,6 @@
 
 import Link from "next/link";
+import { UserAvatar } from "@/components/Avatar";
 import { getTrips } from "@/lib/db";
 import { fmtRange, nightsBetween, todayStr } from "@/lib/format";
 
@@ -48,7 +49,7 @@ export default async function TripsPage() {
         <div className="top-actions">
           <Link href="/trips/new" className="btn btn-primary btn-sm">New Trip</Link>
           <Link href="/" className="btn btn-ghost btn-sm">← Dashboard</Link>
-          <div className="avatar">ML</div>
+          <UserAvatar />
         </div>
       </header>
 

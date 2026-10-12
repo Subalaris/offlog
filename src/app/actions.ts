@@ -15,6 +15,7 @@ import {
 import type { VisitInput } from "@/lib/db";
 import { validateDuplicateRemoval, type DuplicateVisitSelection } from "@/lib/visitDuplicates";
 import { flightBookingSummary, parseFlightLegs } from "@/lib/flights";
+import { readProfile } from "@/lib/profile";
 
 function revalidateTrip(tripId: string) {
   revalidatePath(`/trips/${tripId}`);
@@ -37,7 +38,7 @@ export async function createTrip(formData: FormData) {
     start_date: start,
     end_date: end,
     budget,
-    currency: "USD",
+    currency: readProfile(user.user_metadata).preferred_currency,
     notes: String(formData.get("notes") || "").trim(),
     created_at: new Date().toISOString(),
   };
@@ -69,7 +70,8 @@ export async function deleteTripAction(tripId: string) {
 // ---------- bookings ----------
 export async function createBooking(tripId: string, formData: FormData) {
   await requireUser();
-  if (!(await getTrip(tripId))) throw new Error("Trip not found");
+  const trip = await getTrip(tripId);
+  if (!trip) throw new Error("Trip not found");
   const type = (String(formData.get("type") || "flight") as BookingType);
   const flightLegs = type === "flight" ? parseFlightLegs(formData.get("flight_legs")) : [];
   const booking: Booking = {
@@ -86,7 +88,7 @@ export async function createBooking(tripId: string, formData: FormData) {
     from_place: String(formData.get("from_place") || "").trim(),
     to_place: String(formData.get("to_place") || "").trim(),
     cost: formData.get("cost") ? Number(formData.get("cost")) : null,
-    currency: "USD",
+    currency: trip.currency || "USD",
     status: (String(formData.get("status") || "booked") as Booking["status"]),
     notes: String(formData.get("notes") || "").trim(),
     flight_legs: flightLegs,
