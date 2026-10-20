@@ -181,3 +181,36 @@ service. Import files are read temporarily and are not added to the trip's docum
 upload them separately under Documents if you want to keep them. Files are limited to 10 MB,
 PDF extraction to the first 20 pages, and extracted/pasted text to 100,000 characters. Images,
 scanned PDFs, and password-protected PDFs require copying their text into the paste field.
+
+## Google Calendar subscriptions
+
+Apply `supabase/migrations/20261020000000_calendar_subscriptions.sql` after the existing
+migrations. The migration creates owner-only subscription settings and a narrowly scoped,
+token-gated database function for calendar readers. It also adds modification timestamps to
+trips and bookings so edited events retain their IDs and advertise their last change. No Google
+OAuth credentials, paid API, service-role key, scheduled job, or additional environment variable
+is needed. Keep `NEXT_PUBLIC_SITE_URL` set to the deployed app's HTTPS origin.
+
+In **Profile → Google Calendar**, choose **Create calendar link** and copy the URL. On a computer,
+open Google Calendar, choose **Other calendars → + → From URL**, paste the URL, and add the
+calendar. This is a subscription: edits and deletions in OffLog are reflected when Google fetches
+the feed again. Refresh timing is controlled by Google. Editing Google Calendar does not update
+OffLog. Importing a downloaded `.ics` file creates a snapshot instead of a subscription.
+
+Flights, connections, overnight arrivals, stay check-in/checkout, transfers, and activities appear
+as all-day itinerary markers. Their details contain the booking's local dates and times. OffLog
+currently has no time zones on bookings, so the integration deliberately avoids converting those
+local times into potentially incorrect timed events. Undated bookings are omitted. Calendar
+markers do not block the whole day as busy.
+
+The URL is a bearer link: anyone with it can read the subscribed trip names, dates, providers,
+and locations. Confirmation codes, seats, costs, notes, documents, and account information are
+excluded in the database query itself. Only the exact token feed route bypasses sign-in; the
+rest of OffLog remains private. **Replace link** revokes the old URL. **Disconnect** deletes the
+subscription settings and stops further reads; remove the subscription in Google Calendar to
+remove previously downloaded entries. Google must be able to reach the deployed HTTPS URL;
+a localhost development URL will not work for subscriptions.
+
+Before the migration is applied, Profile remains usable and displays the calendar feature as
+unavailable. Unexpected database failures return HTTP 503 rather than an empty feed, protecting
+subscribed events from disappearing during a temporary outage.

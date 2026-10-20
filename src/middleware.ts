@@ -4,6 +4,8 @@ import { safeAuthDestination } from "@/lib/authRedirect";
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  // Calendar subscribers cannot sign in. The feed itself validates the revocable token.
+  if (/^\/api\/calendar\/[a-f0-9]{64}$/.test(pathname)) return NextResponse.next({ request });
   // The callback must be reachable before a session exists.
   if (pathname === "/auth/callback") return NextResponse.next({ request });
   // Older/default email templates may redirect to the site root rather than the callback.

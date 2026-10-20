@@ -541,3 +541,9 @@ input:focus, select:focus, textarea:focus {
 .booking-import-fields p, .booking-import-result { font-size: 12px; line-height: 1.6; color: var(--muted); }
 .booking-import-fields .btn { justify-self: start; }
 .booking-import-result { margin-top: 12px; }
+
+.calendar-connection > .profile-help { margin-bottom: 14px; }
+.calendar-subscription-details { display: grid; gap: 16px; margin-top: 20px; }
+.calendar-connection-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.calendar-connection-steps { list-style: decimal; padding-left: 22px; color: var(--muted); font-size: 14.5px; }
+.calendar-connection-steps li + li { margin-top: 6px; }
