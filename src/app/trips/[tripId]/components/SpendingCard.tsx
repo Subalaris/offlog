@@ -36,7 +36,7 @@ export function SpendingCard({ trip, bookings }: { trip: Trip; bookings: Booking
       <div className="expense-total">
         {total > 0 ? fmtMoney(total, trip.currency) : "—"}
         {trip.budget != null && (
-          <span style={{ fontSize: 13, fontWeight: 500, color: "var(--muted)" }}>
+          <span style={{ fontSize: 15.5, fontWeight: 500, color: "var(--muted)" }}>
             {" "}/ {fmtMoney(trip.budget, trip.currency)}
           </span>
         )}

@@ -69,6 +69,7 @@ await test("create and update keep all legs in one booking with one shared cost/
   const inserts = [], updates = [], paths = [];
   const actions = load("../src/app/actions.ts", (name) => {
     if (name === "@/lib/flights") return flights;
+    if (name === "@/lib/stays") return load("../src/lib/stays.ts");
     if (name === "@/lib/auth") return { requireUser: async () => ({ id: "owner" }) };
     if (name === "next/cache") return { revalidatePath: path => paths.push(path) };
     if (name === "@/lib/db") return {
@@ -97,6 +98,18 @@ await test("create and update keep all legs in one booking with one shared cost/
   await actions.updateBookingAction("booking-one", fd);
   assert.deepEqual(updates[1].patch.flight_legs, []);
   assert.equal(updates[1].patch.ends_at, "2026-10-05");
+  assert.equal(updates[1].patch.time, "15:00");
+  assert.equal(updates[1].patch.checkout_time, "11:00");
+  fd.set("time", "16:30"); fd.set("checkout_time", "10:00");
+  await actions.createBooking("trip", fd);
+  assert.equal(inserts[1].time, "16:30");
+  assert.equal(inserts[1].checkout_time, "10:00");
+  await actions.updateBookingAction("booking-one", fd);
+  assert.equal(updates[2].patch.time, "16:30");
+  assert.equal(updates[2].patch.checkout_time, "10:00");
+  fd.set("ends_at", "2026-10-01");
+  await assert.rejects(actions.createBooking("trip", fd), /Check-out must be after check-in/);
+  assert.equal(inserts.length, 2);
 });
 
 await test("missing flight schema produces an actionable error on both create and update", async () => {
@@ -119,6 +132,8 @@ await test("missing flight schema produces an actionable error on both create an
   await assert.rejects(db.updateBooking("booking", { date: "", time: "" }), /database update.*migration in Supabase/);
   assert.equal(writes[0].date, null);
   assert.equal(writes[1].time, null);
+  error = { code: "PGRST204", message: "Could not find the checkout_time column in the schema cache" };
+  await assert.rejects(db.insertBooking({ type: "stay", checkout_time: "11:00" }), /20261018000000_stay_checkout_time.sql/);
   error = { code: "42501", message: "Permission denied" };
   await assert.rejects(db.insertBooking({ date: "", time: "" }), /Permission denied/);
 });

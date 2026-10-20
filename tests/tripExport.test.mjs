@@ -15,6 +15,7 @@ function load(path) {
   const module = { exports: {} };
   new Function("require", "exports", "module", compiled)((name) => {
     if (name.endsWith(".css")) return { default: {} };
+    if (name.startsWith("./")) return load(`../src/lib/${name.slice(2)}.ts`);
     if (name.startsWith("@/lib/")) return load(`../src/lib/${name.slice(6)}.ts`);
     return require(name);
   }, module.exports, module);
@@ -84,4 +85,19 @@ test("empty trips, older single-leg flights, and zero costs can be exported", ()
   assert.ok(html.includes("18:00"));
   assert.ok(html.includes("To be confirmed"));
   assert.ok(html.includes("€0"));
+});
+
+
+test("export orders flights and separate stay events, retaining one cost per booking", () => {
+  const html = render({ costs: true, references: false, notes: false }, [
+    { ...base, id: "hotel", type: "stay", title: "Hotel", date: "2026-12-30", ends_at: "2027-01-01", time: "", checkout_time: "10:30", cost: 987 },
+    { ...base, id: "outbound", type: "flight", title: "Morning flight", date: "2026-12-30", time: "09:00", cost: 654 },
+    { ...base, id: "return", type: "flight", title: "Homebound flight", date: "2027-01-01", time: "18:00", cost: 123 },
+  ]);
+  assert.ok(html.indexOf("Morning flight") < html.indexOf("Check-in · Hotel"));
+  assert.ok(html.indexOf("Check-out · Hotel") < html.indexOf("Homebound flight"));
+  assert.ok(html.includes("15:00"));
+  assert.ok(html.includes("10:30"));
+  assert.ok(html.includes("Staying at · Hotel"));
+  assert.equal((html.match(/€987/g) || []).length, 1);
 });

@@ -15,7 +15,7 @@ export function TripHero({ trip }: { trip: Trip }) {
     <>
       <header className="topbar" style={{ marginBottom: 20 }}>
         <div className="greeting">
-          <Link href="/" style={{ color: "var(--muted)", fontSize: 12.5, textDecoration: "none" }}>
+          <Link href="/" style={{ color: "var(--muted)", fontSize: 15, textDecoration: "none" }}>
             ← All trips
           </Link>
           <h1>{trip.name}</h1>
@@ -48,7 +48,7 @@ export function TripHero({ trip }: { trip: Trip }) {
         <section className="card" style={{ marginBottom: 22 }}>
           <div className="card-header">
             <div className="card-label">Edit trip</div>
-            <button className="modal-x" style={{ fontSize: 20 }} onClick={() => setOpen(false)} disabled={pending}>×</button>
+            <button className="modal-x" style={{ fontSize: 24 }} onClick={() => setOpen(false)} disabled={pending}>×</button>
           </div>
           <form action={(fd) => start(() => updateTrip(trip.id, fd))} className="form-grid">
             <label className="field span-2">

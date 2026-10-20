@@ -94,12 +94,28 @@ Flight bookings support up to ten legs under one booking, confirmation code, and
 **Add connection** in the booking form, enter the connecting airport, and add departure and
 arrival dates/times for each leg. Times are local to each airport; arrival dates can differ from
 departure dates. Flight numbers and seats can be entered per leg. Existing single-flight bookings
-remain editable, and the itinerary shows all legs together on the first departure day.
+remain editable. Each leg appears on its departure day, with a separate arrival entry when
+the arrival date differs from departure.
 
 Apply `supabase/migrations/20261001000000_flight_connections.sql` before deploying this feature.
 Local development also uses the Supabase project configured in `.env.local`; starting Next.js does
 not apply database migrations. Run the SQL file in that project's Supabase SQL Editor, then retry
 saving the booking. The migration can be rerun and requests an API schema-cache refresh.
+
+## Stay times and itinerary ordering
+
+Stay bookings have editable check-in and check-out times, defaulting to **15:00** and **11:00**
+in hotel local time. Existing stays without times use those defaults in the itinerary. Check-in
+uses the existing `time` field; check-out uses the new `checkout_time` field.
+
+Apply `supabase/migrations/20261018000000_stay_checkout_time.sql` in your project's Supabase SQL
+Editor before saving stays with this version. The migration is safe to rerun and refreshes the API schema cache.
+
+The trip page and PDF export share one event order: timed events are chronological within each
+local date, with untimed plans afterward. Stays show separate check-in/check-out entries and
+accommodation context on intervening trip days. Overnight flights show their arrival on the
+arrival date. Repeated events share one booking; cost appears only on its first event.
+Flight times remain local to each airport; ordering does not convert between time zones.
 
 ## Travel history imports
 
@@ -150,3 +166,18 @@ trip-linked visits first, then manually entered visits, then the oldest imported
 a different copy to keep or skip a group. Cleanup rechecks the matches before removing up to
 500 selected duplicate copies at a time. Trips and bookings are retained; visits with different
 date ranges are not treated as duplicates.
+
+Booking forms include **Fill from document or text**. Paste labeled confirmation text, choose a
+text-based PDF or `.txt` file, or select a PDF already uploaded to the trip. Import fills a draft;
+review it and select **Save booking** to persist it. Recognized fields replace corresponding values,
+while other manual edits remain. Numbered `Flight 1:`, `Flight 2:` sections import connections.
+Dates accept `YYYY-MM-DD`, `10 November 2026`, or `November 10, 2026`; ambiguous numeric dates
+are left blank. Totals in a different currency are flagged rather than converted. The rule-based parser supports KLM email schedules, Airbnb confirmation layouts, and labeled
+booking details. Airbnb dates without a year are filled only when one matching date falls within
+the selected trip, with a warning to confirm the year. Other layouts may need manual entry.
+
+Booking imports are processed on the authenticated application server without an external AI
+service. Import files are read temporarily and are not added to the trip's document storage;
+upload them separately under Documents if you want to keep them. Files are limited to 10 MB,
+PDF extraction to the first 20 pages, and extracted/pasted text to 100,000 characters. Images,
+scanned PDFs, and password-protected PDFs require copying their text into the paste field.

@@ -1,0 +1,44 @@
+Dear Example Traveler,
+Thank you for choosing KLM. This is your e-ticket for your trip to Toronto.
+Example Traveler <traveler@example.com>
+Ticket for your trip
+KLM <KLM@example.com> Tue, Sep 29, 2026 at 10:42 AM
+Reply-To: KLM@example.com
+To: traveler@example.com
+Booking code: DEMO12
+Ticket number: 0000000000000
+Your flight schedule
+Flight to Amsterdam
+Tuesday 5 January 2027 - 13:00
+Milan, Linate Airport, LIN
+KL1598 | Operated by
+Economy Class | Booking class: L
+Select your seat
+Tuesday 5 January 2027 - 14:50
+Amsterdam, Schiphol Airport, AMS
+10/20/26, 12:24 PM Gmail - Ticket for your trip
+https://mail.google.com/mail/u/0/example 1/6
+-- 1 of 6 --
+0 x Check-in baggage
+1 x Hand baggage
+Total combined weight max. 12 KG
+Status: OK / Not valid before 05/01/2027 / Not valid after 05/01/2027
+Flight to Toronto
+Tuesday 5 January 2027 - 16:50
+Amsterdam, Schiphol Airport, AMS
+KL0695 | Operated by
+Economy Class | Booking class: N
+Select your seat
+Tuesday 5 January 2027 - 19:15
+Toronto, Pearson International Airport, YYZ
+0 x Check-in baggage
+1 x Hand baggage
+Extra options
+Price overview
+Ticket price	EUR 185.00
+Equivalent fare	USD 211.00
+Total ticket price:	USD 475.30
+Payment method:	CCCA
+Issued by:	KLM Royal Dutch Airlines
+Date of issuance:	29 September 2026
+Your personal data will only be processed in accordance with applicable data protection laws.

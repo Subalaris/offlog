@@ -15,10 +15,12 @@ import {
 import type { VisitInput } from "@/lib/db";
 import { validateDuplicateRemoval, type DuplicateVisitSelection } from "@/lib/visitDuplicates";
 import { flightBookingSummary, parseFlightLegs } from "@/lib/flights";
+import { parseStayBooking } from "@/lib/stays";
 import { readProfile } from "@/lib/profile";
 
 function revalidateTrip(tripId: string) {
   revalidatePath(`/trips/${tripId}`);
+  revalidatePath(`/trips/${tripId}/export`);
   revalidatePath("/");
 }
 
@@ -93,6 +95,7 @@ export async function createBooking(tripId: string, formData: FormData) {
     notes: String(formData.get("notes") || "").trim(),
     flight_legs: flightLegs,
     ...(flightLegs.length ? flightBookingSummary(flightLegs) : {}),
+    ...(type === "stay" ? parseStayBooking(formData) : {}),
   };
   await insertBooking(booking);
   revalidateTrip(tripId);
@@ -119,6 +122,7 @@ export async function updateBookingAction(bookingId: string, formData: FormData)
     notes: String(formData.get("notes") || "").trim(),
     ...(type !== "flight" || formData.has("flight_legs") ? { flight_legs: flightLegs } : {}),
     ...(flightLegs.length ? flightBookingSummary(flightLegs) : {}),
+    ...(type === "stay" ? parseStayBooking(formData) : {}),
   };
   await updateBooking(bookingId, patch);
   if (tripId) revalidateTrip(tripId);

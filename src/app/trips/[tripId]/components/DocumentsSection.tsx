@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import type { DocumentItem } from "@/lib/types";
 import { uploadDocument, deleteDocumentAction } from "@/app/actions";
 import { fmtBytes, fmtDate } from "@/lib/format";
@@ -12,6 +12,8 @@ export function DocumentsSection({ tripId, docs }: { tripId: string; docs: Docum
   const [label, setLabel] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [pending, start] = useTransition();
+  const [error, setError] = useState("");
+  const formRef = useRef<HTMLFormElement>(null);
 
   return (
     <section className="card" style={{ marginTop: 15 }} id="documents">
@@ -24,32 +26,51 @@ export function DocumentsSection({ tripId, docs }: { tripId: string; docs: Docum
       </p>
 
       <form
-        action={(fd) => start(() => uploadDocument(tripId, fd))}
+        ref={formRef}
+        onSubmit={(event) => {
+          event.preventDefault();
+          const fd = new FormData(event.currentTarget);
+          setError("");
+          start(async () => {
+            try {
+              await uploadDocument(tripId, fd);
+              formRef.current?.reset();
+              setLabel("");
+              setFile(null);
+            } catch (caught) {
+              setError(caught instanceof Error ? caught.message : "Could not upload this document. Please try again.");
+            }
+          });
+        }}
+        aria-busy={pending}
         className="upload-row"
       >
-        <div className="upload-label field" style={{ justifyContent: "flex-end" }}>
+        <label className="upload-label field" style={{ justifyContent: "flex-end" }}>
           Label
           <input
+            name="label"
             value={label}
+            disabled={pending}
             onChange={(e) => setLabel(e.target.value)}
             placeholder="Return flight, TAP TP 1234"
           />
-          <input type="hidden" name="label" value={label} />
-        </div>
-        <div className="upload-file field" style={{ justifyContent: "flex-end" }}>
+        </label>
+        <label className="upload-file field" style={{ justifyContent: "flex-end" }}>
           File
           <input
             name="file"
             type="file"
             accept=".pdf,.jpg,.jpeg,.png,.webp"
+            disabled={pending}
             onChange={(e) => setFile(e.target.files?.[0] || null)}
             style={{ padding: "8px 10px" }}
           />
-        </div>
+        </label>
         <button type="submit" className="btn btn-primary" disabled={pending || !file}>
           {pending ? "Uploading…" : "Upload"}
         </button>
       </form>
+      {error && <p className="auth-error document-upload-error" role="alert">{error}</p>}
 
       {docs.length === 0 ? (
         <div className="empty" style={{ marginTop: 14 }}>

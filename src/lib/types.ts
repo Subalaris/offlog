@@ -39,6 +39,7 @@ export interface Booking {
   date: string; // YYYY-MM-DD (booking day or check-in)
   time: string; // HH:mm optional
   ends_at: string | null; // for stays: check-out date
+  checkout_time?: string | null; // for stays: hotel local time; defaults to 11:00
   provider: string; // airline / hotel / operator
   reference: string; // confirmation code
   seat: string;

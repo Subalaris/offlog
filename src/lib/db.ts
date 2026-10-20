@@ -16,6 +16,9 @@ function failBookingWrite(error: { message: string; code?: string } | null) {
   if (error?.message.includes("flight_legs") && (error.code === "PGRST204" || error.code === "42703")) {
     throw new Error("Flight connections need a database update before bookings can be saved. Apply the flight connections migration in Supabase, then try again.");
   }
+  if (error?.message.includes("checkout_time") && (error.code === "PGRST204" || error.code === "42703")) {
+    throw new Error("Stay check-out times need a database update before this booking can be saved. Apply supabase/migrations/20261018000000_stay_checkout_time.sql in Supabase, then try again.");
+  }
   fail(error);
 }
 
