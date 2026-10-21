@@ -35,7 +35,7 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AppShell nextTrip={next} userEmail={user?.email ?? null} userName={readProfile(user?.user_metadata).display_name}
+        <AppShell signedIn={Boolean(user)} nextTrip={next} userEmail={user?.email ?? null} userName={readProfile(user?.user_metadata).display_name}
           avatarUrl={user ? profilePhotoUrl(profilePhotoPath(user.user_metadata, user.id)) : null}>{children}</AppShell>
       </body>
     </html>

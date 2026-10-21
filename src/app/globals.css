@@ -19,6 +19,8 @@
 
 * { box-sizing: border-box; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 html, body { margin: 0; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 body {
   font-family: var(--font);
   background: var(--bg);
@@ -344,7 +346,7 @@ input:focus, select:focus, textarea:focus {
 /* ── AUTH ────────────────────────────────── */
 .auth-main { min-height: 100vh; max-width: none; padding: 24px; display: grid; place-items: center; }
 .auth-card { width: 100%; max-width: 430px; padding: 30px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; }
-.auth-logo { padding: 0; margin: 0 0 28px; }
+.auth-logo { padding: 0; margin: 0 0 28px; text-decoration: none; }
 .auth-card h1 { font-size: 30px; letter-spacing: -.7px; }
 .auth-subtitle { color: var(--muted); margin-top: 7px; }
 .auth-form { display: grid; gap: 12px; margin-top: 24px; }

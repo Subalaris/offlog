@@ -35,7 +35,7 @@ export async function middleware(request: NextRequest) {
   const isLogin = pathname === "/login";
   const isApi = pathname.startsWith("/api/");
 
-  if (!user && !isLogin) {
+  if (!user && !isLogin && pathname !== "/") {
     if (isApi) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const url = request.nextUrl.clone();
     url.pathname = "/login";

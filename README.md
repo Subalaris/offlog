@@ -60,6 +60,13 @@ token verification; the default template uses PKCE and should be opened in the b
 sign-in started. Expired or already used links return a clear error with an option to request
 a new email.
 
+## Public homepage
+
+Signed-out visitors can open `/` to learn about OffLog. Planning calls to action send visitors
+through `/login?next=/trips/new` so they can create a trip after signing in. Signed-in users keep
+their dashboard at `/`; all trip, history, profile, and private API routes still require sign-in.
+Existing email callbacks and legacy links to the site root continue to work.
+
 ## User profiles
 
 Open **Profile** in the sidebar or select the account avatar to edit your display name,

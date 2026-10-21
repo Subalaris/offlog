@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { safeAuthDestination } from "@/lib/authRedirect";
@@ -74,10 +75,10 @@ export function LoginForm({ next = "/", initialError = "" }: { next?: string; in
 
   return (
     <div className="auth-card">
-      <div className="logo auth-logo">
+      <Link href="/" className="logo auth-logo" aria-label="OffLog home">
         <div className="logo-mark">✈</div>
         <span>OffLog</span>
-      </div>
+      </Link>
       <div>
         <h1>{codeSent ? "Check your email" : "Welcome to OffLog"}</h1>
         <p className="auth-subtitle">

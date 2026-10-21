@@ -105,3 +105,20 @@ await test("login redirects preserve refreshed session cookies and the requested
   assert.equal(new URL(login.headers.get("location")).searchParams.get("next"), "/trips/one?tab=bookings");
   assert.equal(login.cookies.get("session").value, "refreshed");
 });
+
+await test("homepage is public while trip, profile, history and private API routes stay protected", async () => {
+  const signedOut = middleware(null);
+  const homepage = await signedOut.run(new NextRequest("https://offlog.example/"));
+  assert.equal(homepage.headers.get("x-middleware-next"), "1");
+  assert.equal(homepage.headers.get("location"), null);
+  for (const path of ["/trips", "/trips/new", "/profile", "/history"]) {
+    const response = await signedOut.run(new NextRequest(`https://offlog.example${path}`));
+    assert.equal(response.status, 307);
+    const login = new URL(response.headers.get("location"));
+    assert.equal(login.pathname, "/login");
+    assert.equal(login.searchParams.get("next"), path);
+  }
+  assert.equal((await signedOut.run(new NextRequest("https://offlog.example/api/bookings/import"))).status, 401);
+  const signedIn = await middleware({ id: "owner" }).run(new NextRequest("https://offlog.example/"));
+  assert.equal(signedIn.headers.get("location"), null);
+});

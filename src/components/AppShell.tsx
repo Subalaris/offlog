@@ -8,7 +8,7 @@ import type { Trip } from "@/lib/types";
 import { signOutAction } from "@/app/actions";
 import { Avatar, AvatarContext } from "./Avatar";
 
-export function AppShell({ children, nextTrip, userEmail, userName, avatarUrl }: { children: React.ReactNode; nextTrip: Trip | null; userEmail: string | null; userName: string; avatarUrl: string | null }) {
+export function AppShell({ children, nextTrip, userEmail, userName, avatarUrl, signedIn }: { children: React.ReactNode; nextTrip: Trip | null; userEmail: string | null; userName: string; avatarUrl: string | null; signedIn: boolean }) {
   const pathname = usePathname() || "/";
   const menuRef = useRef<HTMLDialogElement>(null);
 
@@ -25,6 +25,7 @@ export function AppShell({ children, nextTrip, userEmail, userName, avatarUrl }:
     return () => desktop.removeEventListener("change", closeOnDesktop);
   }, []);
 
+  if (pathname === "/" && !signedIn) return <>{children}</>;
   if (pathname === "/login") return <main className="auth-main">{children}</main>;
   if (/^\/trips\/[^/]+\/export$/.test(pathname)) return <main className="export-main">{children}</main>;
 
