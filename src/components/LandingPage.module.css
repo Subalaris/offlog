@@ -134,8 +134,8 @@
 .historyVisual { min-height: 300px; position: relative; }
 .historyVisual > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .mapGrid { position: absolute; inset: 0; background-image: radial-gradient(#315460 1px, transparent 1px); background-size: 16px 16px; mask-image: radial-gradient(ellipse at center, #0009, transparent 70%); }
-.mapLisbon, .mapRome, .mapTokyo { position: absolute; color: #d1e1e7; font-size: 12px; letter-spacing: 2px; }
-.mapLisbon { left: 6%; top: 72%; }
+.mapMiami, .mapRome, .mapTokyo { position: absolute; color: #d1e1e7; font-size: 12px; letter-spacing: 2px; }
+.mapMiami { left: 6%; top: 72%; }
 .mapRome { left: 40%; top: 53%; }
 .mapTokyo { left: 74%; top: 29%; }
 .historyVisual small { display: block; max-width: 130px; color: #8fa5b0; font-size: 12px; letter-spacing: 0; margin-top: 4px; }

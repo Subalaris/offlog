@@ -21,19 +21,19 @@ function Icon({ kind }: { kind: "plane" | "home" | "document" | "spark" | "walle
 }
 
 function TripPreview() {
-  return <figure className={styles.preview} aria-label="An example OffLog trip itinerary for Lisbon">
+  return <figure className={styles.preview} aria-label="An example OffLog trip itinerary for Miami">
     <div className={styles.previewTop}><span className={styles.previewDots} aria-hidden="true"><i /><i /><i /></span><span>YOUR TRIP, TAKING SHAPE</span><span className={styles.previewSample}>Example itinerary</span></div>
     <div className={styles.previewBody}>
       <div className={styles.previewHeading}><span className={styles.eyebrow}>NEXT ADVENTURE</span><span className={styles.confirmed}><span aria-hidden="true">●</span> All set</span></div>
-      <h2>A long weekend<br />in Lisbon.</h2>
-      <p className={styles.previewDestination}>Portugal <span>·</span> 12–16 June</p>
-      <div className={styles.previewRoute}><div><strong>LHR</strong><span>London</span></div><span className={styles.flightPath}><i /><Icon kind="plane" /><i /></span><div><strong>LIS</strong><span>Lisbon</span></div></div>
+      <h2>A long weekend<br />in Miami.</h2>
+      <p className={styles.previewDestination}>Florida, USA <span>·</span> 12–16 June</p>
+      <div className={styles.previewRoute}><div><strong>JFK</strong><span>New York</span></div><span className={styles.flightPath}><i /><Icon kind="plane" /><i /></span><div><strong>MIA</strong><span>Miami</span></div></div>
       <div className={styles.previewItinerary}>
         <div className={styles.previewDay}><span>FRI, 12 JUN</span><span>THE JOURNEY BEGINS</span></div>
-        <div className={styles.previewEvent}><span className={styles.eventIcon}><Icon kind="plane" /></span><div><strong>You’ve arrived in Lisbon</strong><span>13:10 · Lisbon Airport</span></div><span className={styles.eventCheck} aria-hidden="true">✓</span></div>
-        <div className={styles.previewEvent}><span className={styles.eventIcon}><Icon kind="home" /></span><div><strong>Check in, settle in</strong><span>15:00 · Casa do Bairro</span></div><span className={styles.eventCheck} aria-hidden="true">✓</span></div>
+        <div className={styles.previewEvent}><span className={styles.eventIcon}><Icon kind="plane" /></span><div><strong>You’ve arrived in Miami</strong><span>13:10 · Miami International Airport</span></div><span className={styles.eventCheck} aria-hidden="true">✓</span></div>
+        <div className={styles.previewEvent}><span className={styles.eventIcon}><Icon kind="home" /></span><div><strong>Check in, settle in</strong><span>15:00 · South Beach hotel</span></div><span className={styles.eventCheck} aria-hidden="true">✓</span></div>
         <div className={styles.previewDay}><span>SAT, 13 JUN</span><span>A DAY TO EXPLORE</span></div>
-        <div className={styles.previewEvent}><span className={styles.eventIcon}><Icon kind="spark" /></span><div><strong>A walk through Alfama</strong><span>10:00 · Walking tour</span></div><span className={styles.eventCheck} aria-hidden="true">✓</span></div>
+        <div className={styles.previewEvent}><span className={styles.eventIcon}><Icon kind="spark" /></span><div><strong>A walk along Ocean Drive</strong><span>10:00 · Walking tour</span></div><span className={styles.eventCheck} aria-hidden="true">✓</span></div>
       </div>
       <div className={styles.previewBottom}><span><Icon kind="document" /> Tickets & confirmations</span><span>All together <span aria-hidden="true">↗</span></span></div>
     </div>
@@ -84,11 +84,11 @@ export function LandingPage() {
 
       <section id="on-the-go" className={styles.onTheGo} aria-labelledby="on-the-go-title">
         <div className={styles.onTheGoCopy}><p className={styles.eyebrow}>PACK YOUR PLANS, TOO</p><h2 id="on-the-go-title">Ready for<br /><em>the journey.</em></h2><p>Check your itinerary on your phone, add travel dates to Google Calendar, or save a PDF to take with you.</p><p>Your plans stay easy to reach as you move from one place to the next.</p><div className={styles.travelTools}><span><Icon kind="calendar" /> Google Calendar</span><span><Icon kind="document" /> PDF itinerary</span></div></div>
-        <div className={styles.phoneScene}><div className={styles.phone}><div className={styles.phoneCamera} aria-hidden="true" /><div className={styles.phoneTop}><Mark small /><span aria-hidden="true">☰</span></div><p className={styles.eyebrow}>TODAY IN LISBON</p><h3>Hello,<br />new favorite city.</h3><div className={styles.phoneWeather} aria-hidden="true"><span>✳</span><div className={styles.phoneHill} /><div className={styles.phoneTower} /></div><div className={styles.phonePlan}><span className={styles.eventIcon}><Icon kind="spark" /></span><div><strong>Alfama walking tour</strong><span>10:00 · Saturday, 13 June</span></div></div><div className={styles.phoneDocument}><Icon kind="document" /><span>Your itinerary.<br /><strong>Right here.</strong></span><span aria-hidden="true">↗</span></div></div><span className={styles.phoneCaption}>Example trip preview</span></div>
+        <div className={styles.phoneScene}><div className={styles.phone}><div className={styles.phoneCamera} aria-hidden="true" /><div className={styles.phoneTop}><Mark small /><span aria-hidden="true">☰</span></div><p className={styles.eyebrow}>TODAY IN MIAMI</p><h3>Hello,<br />new favorite city.</h3><div className={styles.phoneWeather} aria-hidden="true"><span>✳</span><div className={styles.phoneHill} /><div className={styles.phoneTower} /></div><div className={styles.phonePlan}><span className={styles.eventIcon}><Icon kind="spark" /></span><div><strong>Ocean Drive walking tour</strong><span>10:00 · Saturday, 13 June</span></div></div><div className={styles.phoneDocument}><Icon kind="document" /><span>Your itinerary.<br /><strong>Right here.</strong></span><span aria-hidden="true">↗</span></div></div><span className={styles.phoneCaption}>Example trip preview</span></div>
       </section>
 
       <section id="travel-history" className={styles.history} aria-labelledby="travel-history-title">
-        <div className={styles.historyVisual} aria-hidden="true"><div className={styles.mapGrid} /><svg viewBox="0 0 540 300" fill="none"><path d="M70 196C134 74 178 90 248 128S400 202 465 61" stroke="#315460" strokeWidth="1.5" strokeDasharray="5 7" /><circle cx="70" cy="196" r="5" fill="#22d3ee" /><circle cx="248" cy="128" r="5" fill="#22d3ee" /><circle cx="465" cy="61" r="5" fill="#22d3ee" /><circle cx="248" cy="128" r="16" stroke="#22d3ee" strokeOpacity=".25" /><circle cx="248" cy="128" r="28" stroke="#22d3ee" strokeOpacity=".1" /></svg><span className={styles.mapLisbon}>LISBON<small>A weekend well spent.</small></span><span className={styles.mapRome}>ROME<small>One more espresso.</small></span><span className={styles.mapTokyo}>TOKYO<small>So much to come back for.</small></span></div>
+        <div className={styles.historyVisual} aria-hidden="true"><div className={styles.mapGrid} /><svg viewBox="0 0 540 300" fill="none"><path d="M70 196C134 74 178 90 248 128S400 202 465 61" stroke="#315460" strokeWidth="1.5" strokeDasharray="5 7" /><circle cx="70" cy="196" r="5" fill="#22d3ee" /><circle cx="248" cy="128" r="5" fill="#22d3ee" /><circle cx="465" cy="61" r="5" fill="#22d3ee" /><circle cx="248" cy="128" r="16" stroke="#22d3ee" strokeOpacity=".25" /><circle cx="248" cy="128" r="28" stroke="#22d3ee" strokeOpacity=".1" /></svg><span className={styles.mapMiami}>MIAMI<small>A weekend well spent.</small></span><span className={styles.mapRome}>ROME<small>One more espresso.</small></span><span className={styles.mapTokyo}>TOKYO<small>So much to come back for.</small></span></div>
         <div className={styles.historyCopy}><p className={styles.eyebrow}>THE PLACES STAY WITH YOU</p><h2 id="travel-history-title">Remember<br />where you’ve been.</h2><p>Keep a history of the places you’ve visited and see them on a map. Add visits yourself or bring in travel history from Google Timeline and Google Photos.</p></div>
       </section>
 
